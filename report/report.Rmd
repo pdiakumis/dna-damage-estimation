@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
 ```
 
 Here we'll run the DNA Damage Estimator scripts from the
@@ -32,3 +32,15 @@ perl ../scripts/split_mapped_reads.pl \
   --mpileup2 ../data/out/out2.mpileup
 ```
 
+Output:
+
+```{r engine='bash'}
+ls -lLh ../data/out
+```
+
+```{r engine='bash'}
+head -n5 ../data/out/*.mpileup
+```
+
+
+## Step 2: 
