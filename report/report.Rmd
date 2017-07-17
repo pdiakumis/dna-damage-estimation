@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, comment = NA)
 ```
 ```{r message=FALSE}
 library(ggplot2)
+library(ggforce)
 library(dplyr)
 library(readr)
 ```
@@ -32,7 +33,7 @@ ls -lLh ../data/example
 ### Command Line
 
 ```{r engine='bash', eval=F}
-perl ../scripts/split_mapped_reads.pl \
+perl ../scripts/0-split_mapped_reads.pl \
   --bam ../data/example/NA12891_CEU_sample.bam \
   --genome ../data/genome/human_g1k_v37.fasta \
   --mpileup1 ../data/out/out1.mpileup \
@@ -62,7 +63,7 @@ given BAM file. Options used are:
 
 ### Command Line
 ```{r engine='bash', eval=F}
-perl ../scripts/estimate_damage.pl \
+perl ../scripts/1a-estimate_damage.pl \
   --mpileup1 ../data/out/out1.mpileup \
   --mpileup2 ../data/out/out2.mpileup \
   --id foo \
@@ -74,6 +75,17 @@ perl ../scripts/estimate_damage.pl \
 ```{r engine='bash'}
 head -n5 ../data/out/foo.damage
 ```
+
+Column description:
+
+1. raw count of variant type
+2. variant type (ex. G_T, G to T)
+3. id (from the --id option)
+4. frequency of variant
+5. family (the variant type and reverse complement)
+6. GIV-score
+
+If you have followed the standard protocol for acoustic shearing during library preparation you should obtain a GIV score for G_T around 2.
 
 ### Plot
 
@@ -89,9 +101,9 @@ mut <- readr::read_tsv("../data/out/foo.damage",
 #coloring scheme (feel free to change)
 local_color <- c("cornflowerblue", "royalblue4", paste0("grey", c(1, seq(10, 100, 10))))
 
-d <- ggplot(mut, aes(x = reorder(type, damage), y = log2(damage), color = experiment))
+g <- ggplot(mut, aes(x = reorder(type, damage), y = log2(damage), color = experiment))
 
-d + geom_point(alpha = 0.6, size=1.5) +
+g + geom_point(alpha = 0.6, size=1.5) +
   scale_colour_manual(values = local_color) +
   geom_hline(yintercept = log2(1.5), color = "#990000", linetype = "dashed") +
   annotate("text", x = 4, y = log2(1.6), color = "#990000",
@@ -101,4 +113,62 @@ d + geom_point(alpha = 0.6, size=1.5) +
         legend.position = "bottom", axis.text.x = element_text(angle = 90, hjust = 1, size=11)) +
   ggtitle("GIV scores for variant types")
 ```
+
+
+## Step 3: No context but damage relative to read position
+
+### Command Line
+```{r engine='bash', eval=F}
+perl ../scripts/2a-estimate_damage_location.pl \
+  --mpileup1 ../data/out/out1.mpileup \
+  --mpileup2 ../data/out/out2.mpileup \
+  --id foo2 \
+  --out ../data/out/foo2.damage
+```
+
+### Output
+
+```{r engine='bash'}
+head -n5 ../data/out/foo2.damage
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. absolute counts
+6. position on the read
+
+### Plot
+
+```{r example_plot2}
+mut <- readr::read_tsv("../data/out/foo2.damage",
+                       col_names = c("experiment", "type", "read", "count", "abs", "loc"),
+                       col_types = c("cccdii"))
+
+type_len <- length(unique(mut$type)) # 18 different types, so 4 pages with 5 rows each (last has 3)
+g <- ggplot(mut) +
+  geom_point(aes(x = loc, y = count)) +
+  theme_bw()
+
+nr <- 5
+for (page_num in seq_len(((type_len %% nr) + 1))) {
+  tmp <- g +
+    ggforce::facet_grid_paginate(type~read,
+                                 scales = "fixed",
+                                 ncol = 2, nrow = nr, page = page_num) +
+    ggtitle(paste0("Page ", page_num))
+  print(tmp)
+}
+
+
+
+
+
+
+```
+
+
 

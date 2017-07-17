@@ -6,6 +6,7 @@ Peter Diakumis
 
 ```r
 library(ggplot2)
+library(ggforce)
 library(dplyr)
 library(readr)
 ```
@@ -34,7 +35,7 @@ total 122680
 
 
 ```bash
-perl ../scripts/split_mapped_reads.pl \
+perl ../scripts/0-split_mapped_reads.pl \
   --bam ../data/example/NA12891_CEU_sample.bam \
   --genome ../data/genome/human_g1k_v37.fasta \
   --mpileup1 ../data/out/out1.mpileup \
@@ -49,8 +50,9 @@ ls -lLh ../data/out
 ```
 
 ```
-total 221432
+total 221480
 -rw-r--r--  1 diakumis  10908   1.2K 14 Jul 17:45 foo.damage
+-rw-r--r--  1 diakumis  10908    23K 17 Jul 10:27 foo2.damage
 -rw-r--r--  1 diakumis  10908    54M 14 Jul 17:01 out1.mpileup
 -rw-r--r--  1 diakumis  10908    54M 14 Jul 17:02 out2.mpileup
 ```
@@ -90,7 +92,7 @@ given BAM file. Options used are:
 ### Command Line
 
 ```bash
-perl ../scripts/estimate_damage.pl \
+perl ../scripts/1a-estimate_damage.pl \
   --mpileup1 ../data/out/out1.mpileup \
   --mpileup2 ../data/out/out2.mpileup \
   --id foo \
@@ -112,6 +114,17 @@ head -n5 ../data/out/foo.damage
 8	G_C	foo	4.9330340626002e-05	C_G-G_C	0.113293854112244
 ```
 
+Column description:
+
+1. raw count of variant type
+2. variant type (ex. G_T, G to T)
+3. id (from the --id option)
+4. frequency of variant
+5. family (the variant type and reverse complement)
+6. GIV-score
+
+If you have followed the standard protocol for acoustic shearing during library preparation you should obtain a GIV score for G_T around 2.
+
 ### Plot
 
 
@@ -127,9 +140,9 @@ mut <- readr::read_tsv("../data/out/foo.damage",
 #coloring scheme (feel free to change)
 local_color <- c("cornflowerblue", "royalblue4", paste0("grey", c(1, seq(10, 100, 10))))
 
-d <- ggplot(mut, aes(x = reorder(type, damage), y = log2(damage), color = experiment))
+g <- ggplot(mut, aes(x = reorder(type, damage), y = log2(damage), color = experiment))
 
-d + geom_point(alpha = 0.6, size=1.5) +
+g + geom_point(alpha = 0.6, size=1.5) +
   scale_colour_manual(values = local_color) +
   geom_hline(yintercept = log2(1.5), color = "#990000", linetype = "dashed") +
   annotate("text", x = 4, y = log2(1.6), color = "#990000",
@@ -141,4 +154,69 @@ d + geom_point(alpha = 0.6, size=1.5) +
 ```
 
 ![](report_files/figure-html/example_plot1-1.png)<!-- -->
+
+
+## Step 3: No context but damage relative to read position
+
+### Command Line
+
+```bash
+perl ../scripts/2a-estimate_damage_location.pl \
+  --mpileup1 ../data/out/out1.mpileup \
+  --mpileup2 ../data/out/out2.mpileup \
+  --id foo2 \
+  --out ../data/out/foo2.damage
+```
+
+### Output
+
+
+```bash
+head -n5 ../data/out/foo2.damage
+```
+
+```
+foo2	G_+	R1	0.00142247510668563	2	36
+foo2	G_+	R2	0.0103092783505155	1	36
+foo2	A_G	R1	0.000260710871643348	3	4
+foo2	A_G	R2	0.000272331154684096	1	4
+foo2	A_G	R1	0.000270929287455974	3	6
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. absolute counts
+6. position on the read
+
+### Plot
+
+
+```r
+mut <- readr::read_tsv("../data/out/foo2.damage",
+                       col_names = c("experiment", "type", "read", "count", "abs", "loc"),
+                       col_types = c("cccdii"))
+
+type_len <- length(unique(mut$type)) # 18 different types, so 4 pages with 5 rows each (last has 3)
+g <- ggplot(mut) +
+  geom_point(aes(x = loc, y = count)) +
+  theme_bw()
+
+nr <- 5
+for (page_num in seq_len(((type_len %% nr) + 1))) {
+  tmp <- g +
+    ggforce::facet_grid_paginate(type~read,
+                                 scales = "fixed",
+                                 ncol = 2, nrow = nr, page = page_num) +
+    ggtitle(paste0("Page ", page_num))
+  print(tmp)
+}
+```
+
+![](report_files/figure-html/example_plot2-1.png)<!-- -->![](report_files/figure-html/example_plot2-2.png)<!-- -->![](report_files/figure-html/example_plot2-3.png)<!-- -->![](report_files/figure-html/example_plot2-4.png)<!-- -->
+
+
 
