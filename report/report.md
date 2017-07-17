@@ -87,7 +87,7 @@ given BAM file. Options used are:
 * `-Q`: skip bases with baseQ/BAQ smaller than [0]
 
 
-## Step 2: Estimate damage
+## Step 2: Estimate basic damage 
 
 ### Command Line
 
@@ -156,7 +156,7 @@ g + geom_point(alpha = 0.6, size=1.5) +
 ![](report_files/figure-html/example_plot1-1.png)<!-- -->
 
 
-## Step 3: No context but damage relative to read position
+## Step 3: Estimate damage relative to read position
 
 ### Command Line
 
@@ -205,18 +205,8 @@ g <- ggplot(mut) +
   geom_point(aes(x = loc, y = count)) +
   theme_bw()
 
-nr <- 5
-for (page_num in seq_len(((type_len %% nr) + 1))) {
-  tmp <- g +
-    ggforce::facet_grid_paginate(type~read,
-                                 scales = "fixed",
-                                 ncol = 2, nrow = nr, page = page_num) +
-    ggtitle(paste0("Page ", page_num))
-  print(tmp)
-}
+g + facet_grid(type~read, scales = "fixed")
 ```
 
-![](report_files/figure-html/example_plot2-1.png)<!-- -->![](report_files/figure-html/example_plot2-2.png)<!-- -->![](report_files/figure-html/example_plot2-3.png)<!-- -->![](report_files/figure-html/example_plot2-4.png)<!-- -->
-
-
+![](report_files/figure-html/example_plot2-1.png)<!-- -->
 

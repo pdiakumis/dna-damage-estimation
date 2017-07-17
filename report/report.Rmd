@@ -59,7 +59,7 @@ given BAM file. Options used are:
 * `-Q`: skip bases with baseQ/BAQ smaller than [0]
 
 
-## Step 2: Estimate damage
+## Step 2: Estimate basic damage 
 
 ### Command Line
 ```{r engine='bash', eval=F}
@@ -115,7 +115,7 @@ g + geom_point(alpha = 0.6, size=1.5) +
 ```
 
 
-## Step 3: No context but damage relative to read position
+## Step 3: Estimate damage relative to read position
 
 ### Command Line
 ```{r engine='bash', eval=F}
@@ -143,7 +143,7 @@ Column description:
 
 ### Plot
 
-```{r example_plot2}
+```{r example_plot2, fig.height=20}
 mut <- readr::read_tsv("../data/out/foo2.damage",
                        col_names = c("experiment", "type", "read", "count", "abs", "loc"),
                        col_types = c("cccdii"))
@@ -153,22 +153,6 @@ g <- ggplot(mut) +
   geom_point(aes(x = loc, y = count)) +
   theme_bw()
 
-nr <- 5
-for (page_num in seq_len(((type_len %% nr) + 1))) {
-  tmp <- g +
-    ggforce::facet_grid_paginate(type~read,
-                                 scales = "fixed",
-                                 ncol = 2, nrow = nr, page = page_num) +
-    ggtitle(paste0("Page ", page_num))
-  print(tmp)
-}
-
-
-
-
-
-
+g + facet_grid(type~read, scales = "fixed")
 ```
-
-
 
