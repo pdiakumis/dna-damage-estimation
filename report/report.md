@@ -200,12 +200,10 @@ mut <- readr::read_tsv("../data/out/foo2.damage",
                        col_names = c("experiment", "type", "read", "count", "abs", "loc"),
                        col_types = c("cccdii"))
 
-type_len <- length(unique(mut$type)) # 18 different types, so 4 pages with 5 rows each (last has 3)
-g <- ggplot(mut) +
+ggplot(mut) +
   geom_point(aes(x = loc, y = count)) +
-  theme_bw()
-
-g + facet_grid(type~read, scales = "fixed")
+  theme_bw() +
+  facet_grid(type~read, scales = "fixed")
 ```
 
 ![](report_files/figure-html/example_plot2-1.png)<!-- -->
