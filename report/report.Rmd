@@ -182,7 +182,7 @@ Column description:
   * `1`: damage is analysed function of the 5' nucleotide (C_[base], G_[base], T_[base] and A_[base])
   * `2`: damage is analysed function of the 3' nucleotide ([base]_C, [base]_G, [base]_T and [base]_A)
   * `3`: damage is analysed function of the 5' and 3' nucleotides (C_[base]T, C[base]C, C[base]G,
-    C[base]A, G[base]_T ....), with [base] being the variant analyzed. Default is `3`.
+    C[base]A, G[base]_T ....), with [base] being the variant analysed. Default is `3`.
 7. count (absolute)
 
 ### Plot
