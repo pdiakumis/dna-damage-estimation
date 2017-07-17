@@ -154,3 +154,47 @@ ggplot(mut) +
   facet_grid(type~read, scales = "fixed")
 ```
 
+## Step 4: Estimate damage relative to read position and context
+
+### Command Line
+```{r engine='bash', eval=F}
+perl ../scripts/3a-estimate_damage_location_context.pl \
+  --mpileup1 ../data/out/out1.mpileup \
+  --mpileup2 ../data/out/out2.mpileup \
+  --id foo3 \
+  --out ../data/out/foo3.damage
+```
+
+### Output
+
+```{r engine='bash'}
+head -n5 ../data/out/foo3.damage
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. position on the read
+6. context
+  * `1`: damage is analysed function of the 5' nucleotide (C_[base], G_[base], T_[base] and A_[base])
+  * `2`: damage is analysed function of the 3' nucleotide ([base]_C, [base]_G, [base]_T and [base]_A)
+  * `3`: damage is analysed function of the 5' and 3' nucleotides (C_[base]T, C[base]C, C[base]G,
+    C[base]A, G[base]_T ....), with [base] being the variant analyzed. Default is `3`.
+7. count (absolute)
+
+### Plot
+
+```{r example_plot3, fig.height=20}
+mut <- readr::read_tsv("../data/out/foo3.damage",
+                       col_names = c("experiment", "type", "read", "count", "loc", "context", "abs"),
+                       col_types = c("cccdici"))
+
+
+ggplot(mut) +
+  geom_point(aes(x = loc, y = count)) +
+  theme_bw() +
+  facet_grid(context~read, scales = "free")
+```

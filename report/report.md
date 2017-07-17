@@ -50,9 +50,10 @@ ls -lLh ../data/out
 ```
 
 ```
-total 221480
+total 221832
 -rw-r--r--  1 diakumis  10908   1.2K 14 Jul 17:45 foo.damage
 -rw-r--r--  1 diakumis  10908    23K 17 Jul 10:27 foo2.damage
+-rw-r--r--  1 diakumis  10908   175K 17 Jul 16:17 foo3.damage
 -rw-r--r--  1 diakumis  10908    54M 14 Jul 17:01 out1.mpileup
 -rw-r--r--  1 diakumis  10908    54M 14 Jul 17:02 out2.mpileup
 ```
@@ -208,3 +209,60 @@ ggplot(mut) +
 
 ![](report_files/figure-html/example_plot2-1.png)<!-- -->
 
+## Step 4: Estimate damage relative to read position and context
+
+### Command Line
+
+```bash
+perl ../scripts/3a-estimate_damage_location_context.pl \
+  --mpileup1 ../data/out/out1.mpileup \
+  --mpileup2 ../data/out/out2.mpileup \
+  --id foo3 \
+  --out ../data/out/foo3.damage
+```
+
+### Output
+
+
+```bash
+head -n5 ../data/out/foo3.damage
+```
+
+```
+foo3	G_G	R1	1	2	T_BASE_A	1092
+foo3	G_G	R2	1	2	T_BASE_A	761
+foo3	G_G	R1	1	2	T_BASE_T	1111
+foo3	G_G	R2	1	2	T_BASE_T	795
+foo3	G_G	R1	1	2	G_BASE_G	18
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. position on the read
+6. context
+  * `1`: damage is analysed function of the 5' nucleotide (C_[base], G_[base], T_[base] and A_[base])
+  * `2`: damage is analysed function of the 3' nucleotide ([base]_C, [base]_G, [base]_T and [base]_A)
+  * `3`: damage is analysed function of the 5' and 3' nucleotides (C_[base]T, C[base]C, C[base]G,
+    C[base]A, G[base]_T ....), with [base] being the variant analyzed. Default is `3`.
+7. count (absolute)
+
+### Plot
+
+
+```r
+mut <- readr::read_tsv("../data/out/foo3.damage",
+                       col_names = c("experiment", "type", "read", "count", "loc", "context", "abs"),
+                       col_types = c("cccdici"))
+
+
+ggplot(mut) +
+  geom_point(aes(x = loc, y = count)) +
+  theme_bw() +
+  facet_grid(context~read, scales = "free")
+```
+
+![](report_files/figure-html/example_plot3-1.png)<!-- -->
