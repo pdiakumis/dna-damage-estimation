@@ -1,26 +1,21 @@
-Description of Scripts
-----------------------
-
-Contents
-========
-
 <!-- vim-markdown-toc GFM -->
 * [`split_mapped_reads.pl`](#split_mapped_readspl)
-        * [Pileup format](#pileup-format)
-            * [Examples](#examples)
+    * [Pileup format](#pileup-format)
+    * [Examples](#examples)
+* [`estimate_damage.pl`](#estimate_damagepl)
 
 <!-- vim-markdown-toc -->
 
+# `split_mapped_reads.pl`
 
-`split_mapped_reads.pl`
-======================
-- Splits a `BAM` file into two files containing the first mate (R1 - flag 64) and the
+* Splits a `BAM` file into two files containing the first mate (R1 - flag 64) and the
 second mate (R2 - flag 128) of the paired-end reads, using `samtools view -f <flag>`.
-- Creates `pileup` files using `samtools mpileup -O -s -q <min_mapq> -Q <min_baseq>`, where:
-    `-O`: output base positions on reads
-    `-s`: output mapping quality
+* Creates `pileup` files using `samtools mpileup -O -s -q <min_mapq> -Q <min_baseq>`, where:
+    - `-O`: output base positions on reads
+    - `-s`: output mapping quality
 
-### Pileup format
+## Pileup format
+
 In the pileup format (without -u or -g), each line represents
 a genomic position, consisting of:
 
@@ -49,7 +44,7 @@ a read are all encoded at the __read base__ column. In this column:
   the mapping quality.
 - `$': end of a read.
 
-#### Examples
+## Examples
 
 * Row1: vanilla
 * Row2: with `--no-BAQ`
@@ -89,3 +84,4 @@ So in summary, the `pileup` files generated from this script contain:
 
 chr, pos, ref, cov, rbase, baseq, basepos, mapq.
 
+# `estimate_damage.pl`
