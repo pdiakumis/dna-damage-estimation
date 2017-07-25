@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE, comment = NA)
 ```
 ```{r message=FALSE}
 library(ggplot2)
-library(ggforce)
 library(dplyr)
 library(readr)
 ```
@@ -35,9 +34,9 @@ ls -lLh ../data/example
 ```{r engine='bash', eval=F}
 perl ../scripts/0-split_mapped_reads.pl \
   --bam ../data/example/NA12891_CEU_sample.bam \
-  --genome ../data/genome/human_g1k_v37.fasta \
-  --mpileup1 ../data/out/out1.mpileup \
-  --mpileup2 ../data/out/out2.mpileup
+  --genome ../data/example/human_g1k_v37.fasta.gz \
+  --mpileup1 ../data/out/ex_out1.mpileup \
+  --mpileup2 ../data/out/ex_out2.mpileup
 ```
 
 ### Output
@@ -64,8 +63,8 @@ given BAM file. Options used are:
 ### Command Line
 ```{r engine='bash', eval=F}
 perl ../scripts/1a-estimate_damage.pl \
-  --mpileup1 ../data/out/out1.mpileup \
-  --mpileup2 ../data/out/out2.mpileup \
+  --mpileup1 ../data/out/ex_out1.mpileup \
+  --mpileup2 ../data/out/ex_out2.mpileup \
   --id foo \
   > ../data/out/foo.damage
 ```
@@ -120,8 +119,8 @@ g + geom_point(alpha = 0.6, size=1.5) +
 ### Command Line
 ```{r engine='bash', eval=F}
 perl ../scripts/2a-estimate_damage_location.pl \
-  --mpileup1 ../data/out/out1.mpileup \
-  --mpileup2 ../data/out/out2.mpileup \
+  --mpileup1 ../data/out/ex_out1.mpileup \
+  --mpileup2 ../data/out/ex_out2.mpileup \
   --id foo2 \
   --out ../data/out/foo2.damage
 ```
@@ -159,8 +158,8 @@ ggplot(mut) +
 ### Command Line
 ```{r engine='bash', eval=F}
 perl ../scripts/3a-estimate_damage_location_context.pl \
-  --mpileup1 ../data/out/out1.mpileup \
-  --mpileup2 ../data/out/out2.mpileup \
+  --mpileup1 ../data/out/ex_out1.mpileup \
+  --mpileup2 ../data/out/ex_out2.mpileup \
   --id foo3 \
   --out ../data/out/foo3.damage
 ```
