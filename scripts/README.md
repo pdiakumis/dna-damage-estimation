@@ -29,11 +29,11 @@ a genomic position, consisting of:
 | baseq    | base qualities             |
 
 Information on match/mismatch, indel, strand, mapping quality and start/end of
-a read are all encoded at the __read base__ column. In this column:
+a read are all encoded at the __read bases__ column. In this column:
 
 - dot: match ref on forward strand
 - comma:  match ref on reverse strand
-- '>' or '<': reference skip,
+- `>` or `<`: reference skip,
 - [ACGTN]: mismatch on the forward strand
 - [acgtn]: mismatch on the reverse strand.
 - `\\+[0-9]+[ACGTNacgtn]+` pattern: insertion between this and next ref position
@@ -42,7 +42,7 @@ a read are all encoded at the __read base__ column. In this column:
   Deleted bases will be presented as `*` in the following lines.
 - `^`: start of a read. The ASCII of the character following `^` minus 33 gives
   the mapping quality.
-- `$': end of a read.
+- `$`: end of a read.
 
 ## Examples
 
@@ -82,7 +82,7 @@ $> samtools mpileup --region 1:215906528-215906567 --fasta-ref human_g1k_v37.fas
 
 So in summary, the `pileup` files generated from this script contain:
 
-chr, pos, ref, cov, rbase, baseq, basepos, mapq:
+chr, pos, ref, cov, rbases, baseq, mapq, basepos:
 
 ```
 [...]
@@ -100,3 +100,79 @@ chr, pos, ref, cov, rbase, baseq, basepos, mapq:
 ```
 
 # `estimate_damage.pl`
+
+Has two functions:
+
+* Function1: `clean_bases`: called as `clean_bases(<rbases>, <cov>)`. The `<cov>` parameter
+  isn't used anywhere in the function. The `<rbases>` is referred to as `pattern`.
+    1. Take the `pattern` and remove any `^` followed by a character, and any `$`.
+    2. If there is an indel in the `pattern`, then remove as many characters as
+       its length, leaving the `+` or `-` sign.
+    3. Return the `pattern`.
+
+Here's a sample of what the function does:
+
+
+```
+dirty: ,.,,+1a,
+clean: ,.,+,
+dirty: .$.+1T,,..,.,.
+clean: .+,,..,.,.
+dirty: ,.,+1a,
+clean: ,.+,
+dirty: .+1T,$,,,,....,,.....
+clean: +,,,,,....,,.....
+dirty: ,,,.+1T.,,.....A.
+clean: ,,,+.,,.....A.
+dirty: ,.+1T,$.,.,,.,,..,
+clean: ,+,.,.,,.,,..,
+dirty: ,..,..,+1a
+clean: ,..,..+
+dirty: ,..,.,,+1a,,
+clean: ,..,.,+,,
+dirty: .$...,..,,,+1ga^:,
+clean: ....,..,,+a,
+dirty: .+1T,$.,.,...,,^].
+clean: +,.,.,...,,.
+dirty: ..,....,,+1aC
+clean: ..,....,+C
+dirty: ..,,,...-1G,,,
+clean: ..,,,..-,,,
+dirty: ,$,$,,-1t,
+clean: ,,,-,
+dirty: .+1T,..,,,,,
+clean: +,..,,,,,
+dirty: .+1T.,...^],
+clean: +.,...,
+dirty: ,,,.,,,,+1a,
+clean: ,,,.,,,+,
+dirty: ..,,+1g,.,,.^],
+clean: ..,+,.,,.,
+dirty: ,.+1T,,.,,,,,,,.,,,
+clean: ,+,,.,,,,,,,.,,,
+dirty: .+1T.^:.
+clean: +..
+```
+
+* Function2: `get_relative_count`: called as `get_relative_count(<mpileup-file>)`.
+    * Read in the `mpileup` file a row at a time
+    * Save each row into an array of fields containing `chr`, `loc`, `ref`,
+      `number`, `dirty bases`, `q1`, `q2`, `read positions`
+    * Clean the `dirty bases` and store in `bases`
+    * Split the `bases` into an array `tmp`, and
+      `length_mutation` is this array's length
+    * Split the `read positions` into an array `poss`
+    * __If__ the coverage (number of reads) is equal to the `length_mutation` do the
+      following:
+        * Split the `bases` into an array `base`
+        * Split the `baseq` into an array `qualities`
+        * For every index across the `base`:
+            * Calculate the Phred quality using its baseq
+            * If this passes the cutoff:
+                * Collect the counts of ref-alt counts in a `result` hash with
+                  two elements: `type` and `nt`
+    * Close the file
+    * `mutations` are the different types
+    * Get all the different counts of types
+
+
