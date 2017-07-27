@@ -3,6 +3,7 @@
     * [Pileup format](#pileup-format)
     * [Examples](#examples)
 * [`estimate_damage.pl`](#estimate_damagepl)
+    * [Main](#main)
 
 <!-- vim-markdown-toc -->
 
@@ -170,9 +171,185 @@ clean: +..
             * Calculate the Phred quality using its baseq
             * If this passes the cutoff:
                 * Collect the counts of ref-alt counts in a `result` hash with
-                  two elements: `type` and `nt`
-    * Close the file
-    * `mutations` are the different types
-    * Get all the different counts of types
+                  two elements: `type` and `nt`:
 
+```
+%result:
+{
+'type' => {
+           'T_G' => 1,
+           'G_G' => 57,
+           'G_C' => 1,
+           'G_T' => 2,
+           'C_C' => 33,
+           'A_A' => 123,
+           'T_T' => 92,
+           'G_A' => 1 },
+'nt' => {
+        'G' => 61,
+        'A' => 123,
+        'T' => 93,
+        'C' => 33
+        }
+    };
+```
+* Close the file
+* `mutations` are the different types
+* Get all the different counts of types and store in the `final` hash:
 
+```
+%final:
+{
+  'T_G' => {
+             'total' => 93,
+             'total_type' => 1
+           },
+  'C_C' => {
+             'total_type' => 33,
+             'total' => 33
+           },
+  'A_A' => {
+             'total' => 123,
+             'total_type' => 123
+           },
+  'G_T' => {
+             'total' => 61,
+             'total_type' => 2
+           },
+  'G_G' => {
+             'total_type' => 57,
+             'total' => 61
+           },
+  'G_C' => {
+             'total_type' => 1,
+             'total' => 61
+           },
+  'T_T' => {
+             'total' => 93,
+             'total_type' => 92
+           },
+  'G_A' => {
+             'total_type' => 1,
+             'total' => 61
+           }
+};
+```
+
+## Main
+
+* Get the `relative_count` from both mpileup files
+
+This creates two hashes:
+
+```
+relative_count_R1:
+$VAR1 = \{
+            'T_-' => {
+                       'total_type' => 1,
+                       'total' => 7597
+                     },
+            'G_G' => {
+                       'total_type' => 1784,
+                       'total' => 1785
+                     },
+            'T_T' => {
+                       'total_type' => 7596,
+                       'total' => 7597
+                     },
+            'C_C' => {
+                       'total_type' => 457,
+                       'total' => 458
+                     },
+            'A_A' => {
+                       'total_type' => 4134,
+                       'total' => 4134
+                     },
+            'C_T' => {
+                       'total' => 458,
+                       'total_type' => 1
+                     },
+            'G_T' => {
+                       'total_type' => 1,
+                       'total' => 1785
+                     }
+          };
+
+relative_count_R2:
+$VAR1 = \{
+            'A_G' => {
+                       'total' => 1300,
+                       'total_type' => 1
+                     },
+            'G_G' => {
+                       'total' => 212,
+                       'total_type' => 212
+                     },
+            'T_T' => {
+                       'total_type' => 3710,
+                       'total' => 3710
+                     },
+            'A_A' => {
+                       'total_type' => 1299,
+                       'total' => 1300
+                     },
+            'C_C' => {
+                       'total_type' => 416,
+                       'total' => 418
+                     },
+            'C_T' => {
+                       'total' => 418,
+                       'total_type' => 1
+                     },
+            'C_A' => {
+                       'total' => 418,
+                       'total_type' => 1
+                     }
+          };
+```
+
+So each of the above hashes has two values for a given key-type: `total` and
+`total_type`. For each key-type in the R1 hash:
+
+* Get its reverse complement (`type_RC`)
+* Join `type` and `type_RC` (`couple`)
+* Get `total_type` of that type in R1 and R2 hashes (e.g. for `G_G` it will be 1784 for R1 and 416 for R2 (the reverse complement is taken for R2))
+* Get `total` similarly (e.g. for `G_G` it will be 1785/418 for R1/R2 RevComp)
+* If both R1/R2 have `total_type`, then:
+    * Sum them up e.g. for `G_G`:
+        * `total_type` = 1784 + 416 = 2200 
+        * `total` = 1785 + 418 = 2203)
+    * Get the proportion:
+        * `value` = `total_type` / `total`: 2200 / 2203 = 0.998
+    * Put all that info into the `final` hash:
+
+```
+%final = {
+  'A_A' => {
+             'line' => '7844	A_A		1	A_A-T_T',
+             'value' => '1'
+           },
+  'G_G' => {
+             'value' => '0.998638220608261',
+             'line' => '2200	G_G		0.998638220608261	C_C-G_G'
+           },
+  'C_T' => {
+             'line' => '1	C_T		0.00218340611353712	C_T-G_A',
+             'value' => '0.00218340611353712'
+           },
+  'T_T' => {
+             'value' => '0.999775205125323',
+             'line' => '8895	T_T		0.999775205125323	A_A-T_T'
+           },
+  'C_C' => {
+             'line' => '669	C_C		0.998507462686567	C_C-G_G',
+             'value' => '0.998507462686567'
+           }
+};
+```
+
+Now for each key-type in the `final` hash:
+
+* Get its reverse complement (`type_RC`)
+* If there are values for both `type` and `type_RC` in `final`:
+    * Get the ratio of their values e.g. for `G_G` it will be:
+    * `ratio1` = 0.998638220608261 / 0.998507462686567 = 1.000131
