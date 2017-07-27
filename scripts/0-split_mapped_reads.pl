@@ -34,8 +34,8 @@ my $bam_R2 = new File::Temp( UNLINK => 1 );
 #if(-e $out) { die "File $out Exists, please remove old file or rename output file (--out)"};
 #================================= 
 
-my $command_R1 = "samtools view -b -f 64 -b $BAM > $bam_R1";    
-my $command_R2 = "samtools view -b -f 128 -b $BAM > $bam_R2";
+my $command_R1 = "samtools view -b -f 64 $BAM > $bam_R1";
+my $command_R2 = "samtools view -b -f 128 $BAM > $bam_R2";
 
     #run mpileup on the separated Bam files.
 
