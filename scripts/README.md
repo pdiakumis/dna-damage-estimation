@@ -15,6 +15,7 @@ second mate (R2 - flag 128) of the paired-end reads, using `samtools view -f <fl
     - `-O`: output base positions on reads
     - `-s`: output mapping quality
 
+
 ## Pileup format
 
 In the pileup format (without -u or -g), each line represents
@@ -353,3 +354,8 @@ Now for each key-type in the `final` hash:
 * If there are values for both `type` and `type_RC` in `final`:
     * Get the ratio of their values e.g. for `G_G` it will be:
     * `ratio1` = 0.998638220608261 / 0.998507462686567 = 1.000131
+
+# `subset_chr20.sh`
+
+Took about 16min to subset chr20 from WES013 on Spartan. 
+
