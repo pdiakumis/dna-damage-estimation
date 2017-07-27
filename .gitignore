@@ -3,3 +3,10 @@ data/
 *.html
 .DS_Store
 .Rhistory
+
+# vim swap files
+*.swp
+
+# Cluster STDOUT/STDERR file
+*.out
+*.err
