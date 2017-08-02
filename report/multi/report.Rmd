@@ -31,6 +31,7 @@ The BAM files used are:
 | MH17B001P013           | `''` |
 | MH17T001P013           | `''` |
 
+I'll ignore the germline BAMs in the plots.
 
 
 ## Step 1: Subset chr21 from BAM
@@ -95,6 +96,9 @@ Column description:
 type_clean <-c("G_T", "C_A", "C_T", "G_A", "T_A", "A_T",
                "A_G", "T_C", "C_G", "G_C", "T_G", "A_C")
 fnames <- list.files("data", pattern = "basic.damage$", full.names = TRUE)
+fnames
+fnames <- fnames[!grepl("germline", fnames)]
+fnames
 
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
@@ -147,8 +151,9 @@ Column description:
 
 ### Plot
 
-```{r location_damage, fig.height=20}
-fnames <- list.files("data", pattern = "loc.damage$", full.names = TRUE)
+```{r location_damage, fig.height=30}
+(fnames <- list.files("data", pattern = "loc.damage$", full.names = TRUE))
+(fnames <- fnames[!grepl("germline", fnames)])
 
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
@@ -160,9 +165,9 @@ mut_list <- lapply(fnames, function(f) {
 mut_all <- dplyr::bind_rows(mut_list)
 
 ggplot(mut_all) +
-  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/6) +
   theme_bw() +
-  facet_grid(type~read, scales = "fixed")
+  facet_grid(type~read, scales = "free_y")
 ```
 
 ## Step 4: Estimate damage relative to read position and context
@@ -198,8 +203,9 @@ Column description:
 
 ### Plot
 
-```{r loc_cont_damage, fig.height=20}
-fnames <- list.files("data", pattern = "loc_cont.damage$", full.names = TRUE)
+```{r loc_cont_damage, fig.height=30}
+(fnames <- list.files("data", pattern = "loc_cont.damage$", full.names = TRUE))
+(fnames <- fnames[!grepl("germline", fnames)])
 
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
@@ -208,9 +214,26 @@ mut_list <- lapply(fnames, function(f) {
 })
 mut_all <- dplyr::bind_rows(mut_list)
 
+mut_type <- "G_T"
+mut_filt <- mut_all %>% 
+  filter(type == mut_type)
 
-ggplot(mut_all) +
-  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+ggplot(mut_filt) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/3) +
   theme_bw() +
-  facet_grid(context~read, scales = "free")
+  facet_grid(context~read, scales = "free_y")
 ```
+
+
+```{r loc_cont_damage2, fig.height=30}
+mut_type <- "C_A"
+mut_filt <- mut_all %>% 
+  filter(type == mut_type)
+
+ggplot(mut_filt) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/3) +
+  theme_bw() +
+  facet_grid(context~read, scales = "free_y")
+
+```
+

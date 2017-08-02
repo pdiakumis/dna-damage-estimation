@@ -25,6 +25,7 @@ The BAM files used are:
 | MH17B001P013           | `''` |
 | MH17T001P013           | `''` |
 
+I'll ignore the germline BAMs in the plots.
 
 
 ## Step 1: Subset chr21 from BAM
@@ -102,7 +103,33 @@ Column description:
 type_clean <-c("G_T", "C_A", "C_T", "G_A", "T_A", "A_T",
                "A_G", "T_C", "C_G", "G_C", "T_G", "A_C")
 fnames <- list.files("data", pattern = "basic.damage$", full.names = TRUE)
+fnames
+```
 
+```
+[1] "data/1-MH17B001P004-germline-ready_basic.damage"
+[2] "data/1-MH17B001P004-ready_basic.damage"         
+[3] "data/1-MH17B001P013-germline-ready_basic.damage"
+[4] "data/1-MH17B001P013-ready_basic.damage"         
+[5] "data/1-MH17T001P004-ready_basic.damage"         
+[6] "data/1-MH17T001P013-ready_basic.damage"         
+[7] "data/1-WES013_basic.damage"                     
+```
+
+```r
+fnames <- fnames[!grepl("germline", fnames)]
+fnames
+```
+
+```
+[1] "data/1-MH17B001P004-ready_basic.damage"
+[2] "data/1-MH17B001P013-ready_basic.damage"
+[3] "data/1-MH17T001P004-ready_basic.damage"
+[4] "data/1-MH17T001P013-ready_basic.damage"
+[5] "data/1-WES013_basic.damage"            
+```
+
+```r
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
                          col_names =  c("abs", "type", "experiment", "count", "family", "damage"),
@@ -168,8 +195,32 @@ Column description:
 
 
 ```r
-fnames <- list.files("data", pattern = "loc.damage$", full.names = TRUE)
+(fnames <- list.files("data", pattern = "loc.damage$", full.names = TRUE))
+```
 
+```
+[1] "data/2-MH17B001P004-germline-ready_loc.damage"
+[2] "data/2-MH17B001P004-ready_loc.damage"         
+[3] "data/2-MH17B001P013-germline-ready_loc.damage"
+[4] "data/2-MH17B001P013-ready_loc.damage"         
+[5] "data/2-MH17T001P004-ready_loc.damage"         
+[6] "data/2-MH17T001P013-ready_loc.damage"         
+[7] "data/2-WES013_loc.damage"                     
+```
+
+```r
+(fnames <- fnames[!grepl("germline", fnames)])
+```
+
+```
+[1] "data/2-MH17B001P004-ready_loc.damage"
+[2] "data/2-MH17B001P013-ready_loc.damage"
+[3] "data/2-MH17T001P004-ready_loc.damage"
+[4] "data/2-MH17T001P013-ready_loc.damage"
+[5] "data/2-WES013_loc.damage"            
+```
+
+```r
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
                          col_names = c("experiment", "type", "read", "count", "abs", "loc"),
@@ -180,9 +231,9 @@ mut_list <- lapply(fnames, function(f) {
 mut_all <- dplyr::bind_rows(mut_list)
 
 ggplot(mut_all) +
-  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/6) +
   theme_bw() +
-  facet_grid(type~read, scales = "fixed")
+  facet_grid(type~read, scales = "free_y")
 ```
 
 ![](report_files/figure-html/location_damage-1.png)<!-- -->
@@ -232,8 +283,32 @@ Column description:
 
 
 ```r
-fnames <- list.files("data", pattern = "loc_cont.damage$", full.names = TRUE)
+(fnames <- list.files("data", pattern = "loc_cont.damage$", full.names = TRUE))
+```
 
+```
+[1] "data/3-MH17B001P004-germline-ready_loc_cont.damage"
+[2] "data/3-MH17B001P004-ready_loc_cont.damage"         
+[3] "data/3-MH17B001P013-germline-ready_loc_cont.damage"
+[4] "data/3-MH17B001P013-ready_loc_cont.damage"         
+[5] "data/3-MH17T001P004-ready_loc_cont.damage"         
+[6] "data/3-MH17T001P013-ready_loc_cont.damage"         
+[7] "data/3-WES013_loc_cont.damage"                     
+```
+
+```r
+(fnames <- fnames[!grepl("germline", fnames)])
+```
+
+```
+[1] "data/3-MH17B001P004-ready_loc_cont.damage"
+[2] "data/3-MH17B001P013-ready_loc_cont.damage"
+[3] "data/3-MH17T001P004-ready_loc_cont.damage"
+[4] "data/3-MH17T001P013-ready_loc_cont.damage"
+[5] "data/3-WES013_loc_cont.damage"            
+```
+
+```r
 mut_list <- lapply(fnames, function(f) {
   mut <- readr::read_tsv(f,
                        col_names = c("experiment", "type", "read", "count", "loc", "context", "abs"),
@@ -241,11 +316,30 @@ mut_list <- lapply(fnames, function(f) {
 })
 mut_all <- dplyr::bind_rows(mut_list)
 
+mut_type <- "G_T"
+mut_filt <- mut_all %>% 
+  filter(type == mut_type)
 
-ggplot(mut_all) +
-  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+ggplot(mut_filt) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/3) +
   theme_bw() +
-  facet_grid(context~read, scales = "free")
+  facet_grid(context~read, scales = "free_y")
 ```
 
 ![](report_files/figure-html/loc_cont_damage-1.png)<!-- -->
+
+
+
+```r
+mut_type <- "C_A"
+mut_filt <- mut_all %>% 
+  filter(type == mut_type)
+
+ggplot(mut_filt) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/3) +
+  theme_bw() +
+  facet_grid(context~read, scales = "free_y")
+```
+
+![](report_files/figure-html/loc_cont_damage2-1.png)<!-- -->
+
