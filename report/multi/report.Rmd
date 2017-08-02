@@ -1,0 +1,216 @@
+---
+title: "DNA Damage Estimation"
+author: "Peter Diakumis"
+date: "02 August 2017"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+```
+```{r message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(readr)
+```
+
+Here we'll run the DNA Damage Estimator scripts from the
+[Ettwiller GitHub repo](https://github.com/Ettwiller/Damage-estimator).
+
+The BAM files used are:
+
+| FileName               | Path                            |
+|------------------------|---------------------------------|
+| WES013 | `projects/Hsu_WGS_Validation/WGS-WES013PF-merged/work/align/WES013PFFR/` |
+| MH17B001P004-germline  | `data/Grimmond_Patients/MH17B001P004/` |
+| MH17B001P004           | `''` |
+| MH17T001P004           | `''` |
+| MH17B001P013-germline  | `data/Grimmond_Patients/MH17B001P013/` |
+| MH17B001P013           | `''` |
+| MH17T001P013           | `''` |
+
+
+
+## Step 1: Subset chr21 from BAM
+
+```{r engine='bash', eval=F}
+BAM='path/to/bam/file.bam'
+CHROM=21
+samtools view ${BAM} -b ${CHROM} > "${BAM_DIR}/$(basename $BAM .bam)_chr${CHROM}.bam"
+```
+
+## Step 2: Split BAM into R1 and R2
+
+### Command Line
+
+```{r engine='bash', eval=F}
+perl scripts/0-split_mapped_reads.pl \
+  --bam path/to/bam/file_chr21.bam \
+  --genome GRCh37.fa \
+  --mpileup1 sampleFoo_R1.mpileup \
+  --mpileup2 sampleFoo_R2.mpileup
+```
+
+The script uses `samtools mpileup` to output a summary of the read pileup in the
+given BAM file. Options used are:
+
+* `-O`: output base positions on reads
+* `-s`: output mapping quality
+* `-q`: skip alignments with mapQ smaller than [10]
+* `-Q`: skip bases with baseQ/BAQ smaller than [0]
+
+
+## Step 3: Estimate basic damage
+
+### Command Line
+```{r engine='bash', eval=F}
+perl 1a-estimate_damage.pl \
+  --mpileup1 sampleFoo_R1.mpileup \
+  --mpileup2 sampleFoo_R2.mpileup
+  --id sampleFoo \
+  > basic.damage
+```
+
+### Output example
+
+```{r engine='bash'}
+head -n5 ../../data/WES013/out/chr21/1-basic.damage
+```
+
+Column description:
+
+1. raw count of variant type
+2. variant type (ex. G_T, G to T)
+3. id (from the --id option)
+4. frequency of variant
+5. family (the variant type and reverse complement)
+6. GIV-score
+
+
+### Plot
+
+```{r basic_damage}
+type_clean <-c("G_T", "C_A", "C_T", "G_A", "T_A", "A_T",
+               "A_G", "T_C", "C_G", "G_C", "T_G", "A_C")
+fnames <- list.files("data", pattern = "basic.damage$", full.names = TRUE)
+
+mut_list <- lapply(fnames, function(f) {
+  mut <- readr::read_tsv(f,
+                         col_names =  c("abs", "type", "experiment", "count", "family", "damage"),
+                         col_types = "iccdcd") %>%
+    filter(type %in% type_clean) %>%
+    mutate(type = factor(type, level = type_clean))
+  mut
+})
+
+mut_all <- dplyr::bind_rows(mut_list)
+
+g <- ggplot(mut_all, aes(x = reorder(type, damage), y = log2(damage), color = experiment))
+
+g + geom_point(alpha = 1/2, size=1.5) +
+  geom_hline(yintercept = log2(1.5), color = "#990000", linetype = "dashed") +
+  annotate("text", x = 4, y = log2(1.6), color = "#990000",
+           label = "1/3 of variants is due to damage") +
+  geom_hline(yintercept = 0, color = "grey") +
+  theme(panel.background = element_rect(fill = 'white', colour = 'white')) +
+  ggtitle("GIV scores for variant types")
+```
+
+
+## Step 4: Estimate damage relative to read position
+
+### Command Line
+```{r engine='bash', eval=F}
+perl scripts/2a-estimate_damage_location.pl \
+  --mpileup1 sampleFoo_R1.mpileup \
+  --mpileup2 sampleFoo_R2.mpileup \
+  --id sampleFoo \
+  --out loc.damage
+```
+
+### Output Example
+
+```{r engine='bash'}
+head -n5 ../../data/WES013/out/chr21/2-loc.damage
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. absolute counts
+6. position on the read
+
+### Plot
+
+```{r location_damage, fig.height=20}
+fnames <- list.files("data", pattern = "loc.damage$", full.names = TRUE)
+
+mut_list <- lapply(fnames, function(f) {
+  mut <- readr::read_tsv(f,
+                         col_names = c("experiment", "type", "read", "count", "abs", "loc"),
+                         col_types = c("cccdii"))
+  mut
+})
+
+mut_all <- dplyr::bind_rows(mut_list)
+
+ggplot(mut_all) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+  theme_bw() +
+  facet_grid(type~read, scales = "fixed")
+```
+
+## Step 4: Estimate damage relative to read position and context
+
+### Command Line
+```{r engine='bash', eval=F}
+perl 3a-estimate_damage_location_context.pl \
+  --mpileup1 sampleFoo_R1.mpileup \
+  --mpileup2 sampleFoo_R2.mpileup \
+  --id sampleFoo \
+  --out pos_loc.damage
+```
+
+### Output
+
+```{r engine='bash'}
+head -n5 ../../data/WES013/out/chr21/3-pos_loc.damage
+```
+
+Column description:
+
+1. id (from the --id option)
+2. variant type (ex. G_T, G to T)
+3. R1 or R2
+4. count (freq)
+5. position on the read
+6. context
+  * `1`: damage is analysed function of the 5' nucleotide (C_[base], G_[base], T_[base] and A_[base])
+  * `2`: damage is analysed function of the 3' nucleotide ([base]_C, [base]_G, [base]_T and [base]_A)
+  * `3`: damage is analysed function of the 5' and 3' nucleotides (C_[base]T, C[base]C, C[base]G,
+    C[base]A, G[base]_T ....), with [base] being the variant analysed. Default is `3`.
+7. count (absolute)
+
+### Plot
+
+```{r loc_cont_damage, fig.height=20}
+fnames <- list.files("data", pattern = "loc_cont.damage$", full.names = TRUE)
+
+mut_list <- lapply(fnames, function(f) {
+  mut <- readr::read_tsv(f,
+                       col_names = c("experiment", "type", "read", "count", "loc", "context", "abs"),
+                       col_types = c("cccdici"))
+})
+mut_all <- dplyr::bind_rows(mut_list)
+
+
+ggplot(mut_all) +
+  geom_point(aes(x = loc, y = count, colour = experiment), alpha = 1/10) +
+  theme_bw() +
+  facet_grid(context~read, scales = "free")
+```
