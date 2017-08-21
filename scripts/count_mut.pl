@@ -26,19 +26,82 @@ my $soft_masked = 1;
 ###################################################################
 ######### Main ####################################################
 ###################################################################
-# position
-#open(OUT_CP, ">", $out_cp)  or die "Can't open $out_cp for writing";
+# total
 my $pos_result = &get_position_count($in_mp, $soft_masked, $cov_min, $cov_max, $baseq_min);
 my $tot_result = &get_total_count($pos_result);
-#print Dumper($pos_result);
-print Dumper($tot_result);
-#my $pos_final = &summarise_result_pos($pos_result);
-#&print_pos_counts($pos_final, \*OUT_CP);
-#close(OUT_CP);
+my $tot_final = &summarise_total($tot_result);
+open(OUT_CT, ">", $out_ct)  or die "Can't open $out_ct for writing";
+&print_total($tot_final, \*OUT_CT);
+close(OUT_CT);
+
+## position
+open(OUT_CP, ">", $out_cp)  or die "Can't open $out_cp for writing";
+my $pos_final = &summarise_pos($pos_result);
+&print_pos($pos_final, \*OUT_CP);
+close(OUT_CP);
 
 ###################################################################
 ######### Functions ###############################################
 ###################################################################
+
+sub print_pos {
+    my ($final, $fh) = @_;
+    print $fh "Type\tPosition\tAbsolute\tRelative\n";
+    foreach my $type (sort keys %{$final}) {
+        my $positions = ${$final}{$type};
+        foreach my $pos (keys %$positions) {
+            my $abs = $positions->{$pos}->{'absolute'};
+            my $rel = $positions->{$pos}->{'relative'};
+            print $fh "$type\t" . $pos . "\t" . $abs . "\t" . $rel . "\n";
+        }
+    }
+}
+
+sub print_total {
+    my ($final, $fh) = @_;
+    print $fh "Type\tTotal_Type\tTotal\n";
+    foreach my $type (sort keys %{$final}) {
+        print $fh "$type\t" . $final->{$type}->{"total_type"} . "\t" . $final->{$type}->{"total"} . "\n";
+    }
+}
+
+sub summarise_total {
+    my ($result) = @_;
+    my %final;
+
+    my $mutations = %{$result}{"type"};
+    my $nt = %{$result}{"nt"};
+
+    foreach my $type (keys %$mutations) {
+        my $total_type = %{$mutations}{$type};
+        $type =~ /(.)\_(.)/;
+        my $total = %{$nt}{$1};
+
+        $final{$type}{"total_type"} = $total_type;
+        $final{$type}{"total"} = $total;
+    }
+    return(\%final);
+}
+
+sub summarise_pos {
+    my ($result) = @_;
+    my %final;
+
+    my $positions = %{$result}{"type"};
+    foreach my $pos (keys %$positions) {
+        my $mutations = $$positions{$pos};
+        foreach my $type (keys %$mutations) {
+            my $total_type = $$result{"type"}{$pos}{$type};
+            $type =~ /(.)\_(.)/;
+            my $total = $$result{"nt"}{$pos}{$1};
+            my $rel_value = $total_type / $total;
+            $final{$type}{$pos}{"relative"} = $rel_value;
+            $final{$type}{$pos}{"absolute"} = $total_type;
+        }
+    }
+    return(\%final);
+}
+
 sub get_total_count {
     my ($href) = @_;
     my (%nt_total, %type_total);
