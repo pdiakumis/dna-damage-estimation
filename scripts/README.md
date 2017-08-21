@@ -355,20 +355,3 @@ Now for each key-type in the `final` hash:
     * Get the ratio of their values e.g. for `G_G` it will be:
     * `ratio1` = 0.998638220608261 / 0.998507462686567 = 1.000131
 
-# Running WES013
-
-* `subset_chr20.sh`
-
-Took 16min to subset chr20 from WES013.
-
-* `split_mapped_reads.pl`
-Took 2 hours to split chr20:
-[Thu Jul 27 16:37:36 AEST 2017] Starting analysis
-[Thu Jul 27 16:37:36 AEST 2017] Step 1: splitting into R1 and R2
-[Thu Jul 27 18:35:47 AEST 2017] Step 1 Finished!
-
-total 46G
-24G -rw-r--r-- 1 pdiakumis punim0010 24G Jul 27 17:45 WES013_R1.mpileup
-23G -rw-r--r-- 1 pdiakumis punim0010 23G Jul 27 18:35 WES013_R2.mpileup
-
-
