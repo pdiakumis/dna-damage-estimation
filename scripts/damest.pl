@@ -42,13 +42,13 @@ open(OUT_TOT, ">", $out_tot) or die "Can't open $out_tot for writing";
 &print_tot_out($counts_tot1, $counts_tot2, \%RC, \*OUT_TOT);
 close(OUT_TOT);
 
-## Position
-#my $counts_pos1 = &read_pos_counts($cp1);
-#my $counts_pos2 = &read_pos_counts($cp2);
-#
-#open(OUT_POS, ">", $out_pos) or die "Can't open $out_pos for writing";
-#&print_pos_out($counts_pos1, $counts_pos2, \%RC, \*OUT_POS);
-#close(OUT_POS);
+# Position
+my $counts_pos1 = &read_pos_counts($cp1);
+my $counts_pos2 = &read_pos_counts($cp2);
+
+open(OUT_POS, ">", $out_pos) or die "Can't open $out_pos for writing";
+&print_pos_out($counts_pos1, $counts_pos2, \%RC, \*OUT_POS);
+close(OUT_POS);
 
 
 ###################################################################
