@@ -3,9 +3,13 @@ shell.prefix("set -euo pipefail; ")
 
 rule all:
     input:
-        expand('{out_dir}/{sample}_giv_scores.tsv',
+        expand('{out_dir}/{sample}_tot_damage.tsv',
                out_dir = config['out_dir'],
-               sample = config['samples2'])
+               sample = config['samples']),
+        expand('{out_dir}/{sample}_pos_damage.tsv',
+               out_dir = config['out_dir'],
+               sample = config['samples'])
+
 
 
 rule samtools_filter:
@@ -25,7 +29,7 @@ rule samtools_mpileup:
     """Generate read pileup"""
     input:
         bam = config['out_dir'] + '{sample}_f{flag}.bam',
-        fasta = config['fasta2']
+        fasta = config['fasta']
     output:
         pileup = config['out_dir'] + '{sample}_f{flag}.mpileup'
     params:
@@ -43,23 +47,31 @@ rule count_mutations:
     input:
         pileup = config['out_dir'] + '{sample}_f{flag}.mpileup'
     output:
-        counts = config['out_dir'] + '{sample}_f{flag}_counts.tsv'
+        counts_tot = config['out_dir'] + '{sample}_f{flag}_counts_tot.tsv',
+        counts_pos = config['out_dir'] + '{sample}_f{flag}_counts_pos.tsv'
     log:
         config['log_dir'] + '{sample}_f{flag}_counts.log'
     threads: 1
     shell:
-        "perl ../scripts/count_mutations.pl {input.pileup} > {output.counts} 2> {log}"
+        "perl ../scripts/count_mutations.pl --in_mp {input.pileup} "
+        "--out_ct {output.counts_tot} --out_cp {output.counts_pos} 2> {log}"
 
-rule estimate_giv:
-    """Estimate GIV score"""
+rule estimate_damage:
+    """Estimate damage scores"""
     input:
-        counts1 = config['out_dir'] + '{sample}_f64_counts.tsv',
-        counts2 = config['out_dir'] + '{sample}_f128_counts.tsv'
+        ct1 = config['out_dir'] + '{sample}_f64_counts_tot.tsv',
+        ct2 = config['out_dir'] + '{sample}_f128_counts_tot.tsv',
+        cp1 = config['out_dir'] + '{sample}_f64_counts_pos.tsv',
+        cp2 = config['out_dir'] + '{sample}_f128_counts_pos.tsv'
     output:
-        giv = config['out_dir'] + '{sample}_giv_scores.tsv'
+        tot = config['out_dir'] + '{sample}_tot_damage.tsv',
+        pos = config['out_dir'] + '{sample}_pos_damage.tsv'
     log:
-        config['log_dir'] + '{sample}_giv_scores.log'
+        config['log_dir'] + '{sample}_damest.log'
     threads: 1
     shell:
-        "perl ../scripts/damest.pl --c1 {input.counts1} --c2 {input.counts2} "
-        "--id {wildcards.sample} > {output.giv} 2> {log}"
+        "perl ../scripts/damest.pl "
+        "--ct1 {input.ct1} --ct2 {input.ct2} "
+        "--cp1 {input.cp1} --cp2 {input.cp2} "
+        "--out_tot {output.tot} --out_pos {output.pos} "
+        "--id {wildcards.sample} 2> {log}"
