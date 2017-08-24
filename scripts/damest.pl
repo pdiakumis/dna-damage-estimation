@@ -2,7 +2,6 @@
 
 use strict; use warnings;
 use Getopt::Long qw(GetOptions);
-use Data::Dumper;
 
 my %RC = (
     'A_C' => 'T_G', 'A_A' => 'T_T', 'A_T' => 'T_A', 'A_G' => 'T_C',
@@ -14,16 +13,19 @@ my %RC = (
 );
 
 
-my $error_message = "Usage: $0 --ct1 <counts_tot1.tsv> --ct2 <counts_tot2.tsv> --cp1 <counts_pos1.tsv> --cp2 <counts_pos2.tsv> --out_tot <total.damage> --out_pos <pos.damage> --id <sample_id>\n";
-my ($ct1, $ct2, $cp1, $cp2, $out_tot, $out_pos, $id);
+my $error_message = "Usage: $0 --ct1 <counts_tot1.tsv> --ct2 <counts_tot2.tsv> --cp1 <counts_pos1.tsv> --cp2 <counts_pos2.tsv> --out_tot <total.damage> --out_pos <pos.damage> --out_con <con.damage> --id <sample_id>\n";
+my ($ct1, $ct2, $cp1, $cp2, $cc1, $cc2, $out_tot, $out_pos, $out_con, $id);
 
 GetOptions (
     "ct1=s" => \$ct1,
     "ct2=s" => \$ct2,
     "cp1=s" => \$cp1,
     "cp2=s" => \$cp2,
+    "cc1=s" => \$cc1,
+    "cc2=s" => \$cc2,
     "out_tot=s" => \$out_tot,
     "out_pos=s" => \$out_pos,
+    "out_con=s" => \$out_con,
     "id=s" => \$id
 ) or die $error_message;
 
@@ -50,6 +52,13 @@ open(OUT_POS, ">", $out_pos) or die "Can't open $out_pos for writing";
 &print_pos_out($counts_pos1, $counts_pos2, \%RC, \*OUT_POS);
 close(OUT_POS);
 
+# Context
+my $counts_con1 = &read_con_counts($cc1);
+my $counts_con2 = &read_con_counts($cc2);
+
+open(OUT_CON, ">", $out_con) or die "Can't open $out_con for writing";
+&print_con_out($counts_con1, $counts_con2, \*OUT_CON);
+close(OUT_CON);
 
 ###################################################################
 ######### Functions ###############################################
@@ -82,6 +91,23 @@ sub read_pos_counts {
             my ($type, $pos, $abs, $rel) = split /\t/;
             $final{$type}{$pos}{"absolute"} = $abs;
             $final{$type}{$pos}{"relative"} = $rel;
+        }
+    }
+    close COUNTS;
+    return(\%final);
+}
+
+sub read_con_counts {
+    my ($count_file) = @_;
+    my %final;
+
+    open (COUNTS, $count_file) or die "Can't open $count_file\n";
+    while (<COUNTS>) {
+        chomp;
+        unless (/Absolute/) {
+            my ($type, $pos, $con, $abs, $rel) = split /\t/;
+            $final{$type}{$pos}{$con}{"absolute"} = $abs;
+            $final{$type}{$pos}{$con}{"relative"} = $rel;
         }
     }
     close COUNTS;
@@ -134,6 +160,29 @@ sub print_tot_out {
             my $ratio1 = $final{$type}{"value"} / $final{$type_rc}{"value"};
             my $line = $final{$type}{"line"};
             print $fh "$line\t$ratio1\n";
+        }
+    }
+}
+
+sub print_con_out {
+    my ($counts1, $counts2, $fh) = @_;
+    my %final;
+
+    foreach my $type (keys %$counts1) {
+        my $positions = $counts1->{$type};
+        foreach my $pos (sort {$a<=>$b} keys %$positions) {
+            my $contexts = $positions->{$pos};
+            foreach my $con (keys %$contexts) {
+                my $rel1 = $$counts1{$type}{$pos}{$con}{'relative'};
+                my $rel2 = $$counts2{$type}{$pos}{$con}{'relative'};
+                my $abs1 = $$counts1{$type}{$pos}{$con}{'absolute'};
+                my $abs2 = $$counts2{$type}{$pos}{$con}{'absolute'};
+
+                if ($$counts1{$type}{$pos}{$con}{'relative'} && $$counts2{$type}{$pos}{$con}{'relative'}) {
+                    print $fh "$id\t$type\tR1\t$rel1\t$pos\t$con\t$abs1\n";
+                    print $fh "$id\t$type\tR2\t$rel2\t$pos\t$con\t$abs2\n";
+                }
+            }
         }
     }
 }
