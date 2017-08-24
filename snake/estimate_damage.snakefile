@@ -8,6 +8,9 @@ rule all:
                sample = config['samples']),
         expand('{out_dir}/{sample}_pos_damage.tsv',
                out_dir = config['out_dir'],
+               sample = config['samples']),
+        expand('{out_dir}/{sample}_con_damage.tsv',
+               out_dir = config['out_dir'],
                sample = config['samples'])
 
 
@@ -48,13 +51,15 @@ rule count_mutations:
         pileup = config['out_dir'] + '{sample}_f{flag}.mpileup'
     output:
         counts_tot = config['out_dir'] + '{sample}_f{flag}_counts_tot.tsv',
-        counts_pos = config['out_dir'] + '{sample}_f{flag}_counts_pos.tsv'
+        counts_pos = config['out_dir'] + '{sample}_f{flag}_counts_pos.tsv',
+        counts_con = config['out_dir'] + '{sample}_f{flag}_counts_con.tsv'
     log:
         config['log_dir'] + '{sample}_f{flag}_counts.log'
     threads: 1
     shell:
-        "perl ../scripts/count_mutations.pl --in_mp {input.pileup} "
-        "--out_ct {output.counts_tot} --out_cp {output.counts_pos} 2> {log}"
+        "perl ../scripts/count_mut.pl --in_mp {input.pileup} "
+        "--out_ct {output.counts_tot} --out_cp {output.counts_pos} "
+        "--out_cc {output.counts_con} 2> {log}"
 
 rule estimate_damage:
     """Estimate damage scores"""
@@ -62,10 +67,13 @@ rule estimate_damage:
         ct1 = config['out_dir'] + '{sample}_f64_counts_tot.tsv',
         ct2 = config['out_dir'] + '{sample}_f128_counts_tot.tsv',
         cp1 = config['out_dir'] + '{sample}_f64_counts_pos.tsv',
-        cp2 = config['out_dir'] + '{sample}_f128_counts_pos.tsv'
+        cp2 = config['out_dir'] + '{sample}_f128_counts_pos.tsv',
+        cc1 = config['out_dir'] + '{sample}_f64_counts_con.tsv',
+        cc2 = config['out_dir'] + '{sample}_f128_counts_con.tsv'
     output:
         tot = config['out_dir'] + '{sample}_tot_damage.tsv',
-        pos = config['out_dir'] + '{sample}_pos_damage.tsv'
+        pos = config['out_dir'] + '{sample}_pos_damage.tsv',
+        con = config['out_dir'] + '{sample}_con_damage.tsv'
     log:
         config['log_dir'] + '{sample}_damest.log'
     threads: 1
@@ -73,5 +81,6 @@ rule estimate_damage:
         "perl ../scripts/damest.pl "
         "--ct1 {input.ct1} --ct2 {input.ct2} "
         "--cp1 {input.cp1} --cp2 {input.cp2} "
+        "--cc1 {input.cc1} --cc2 {input.cc2} "
         "--out_tot {output.tot} --out_pos {output.pos} "
-        "--id {wildcards.sample} 2> {log}"
+        "--out_con {output.con} --id {wildcards.sample} 2> {log}"
