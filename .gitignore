@@ -10,3 +10,6 @@ data/
 # Cluster STDOUT/STDERR file
 *.out
 *.err
+
+.snakemake/
+dag.svg
