@@ -1,0 +1,14 @@
+{
+    "__default__" :
+    {
+        "time": "02:00:00",
+        "n": 1,
+        "partition": "vccc",
+        "mem": 15000
+    },
+    "samtools_mpileup":
+    {
+        "time": "03:00:00",
+        "mem": 20000
+    }
+}
