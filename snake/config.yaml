@@ -5,7 +5,8 @@ filter_flag: [64, 128]
 map_qual: 10
 base_qual: 0
 fasta2: "../data/genome/GRCh37_chr21.fa"
-fasta: "../data/genome/hg19_chr21.fa"
+fasta1: "../data/genome/hg19_chr21.fa"
+fasta: "../data/genome/hg19.fa"
 samples2: ['MH17B001P004-germline-ready_chr21', 'MH17B001P004-ready_chr21', 'MH17T001P004-ready_chr21',
           'MH17B001P013-germline-ready_chr21', 'MH17B001P013-ready_chr21', 'MH17T001P013-ready_chr21',
           'WES013PFFR-sort_chr21']
