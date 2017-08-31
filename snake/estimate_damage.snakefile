@@ -1,5 +1,6 @@
 configfile: 'config.yaml'
 shell.prefix("set -euo pipefail; ")
+shell.prefix("module load Perl; ")
 
 rule all:
     input:

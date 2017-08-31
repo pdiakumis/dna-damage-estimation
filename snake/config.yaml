@@ -4,8 +4,10 @@ log_dir: "../data/out/logs"
 filter_flag: [64, 128]
 map_qual: 10
 base_qual: 0
-fasta: "../data/genome/GRCh37_chr21.fa"
-fasta2: "../data/genome/hg19_chr21.fa"
-samples: ['MH17B001P004-ready_chr21_2pc', 'MH17T001P004-ready_chr21_1pc', 'WES013PFFR-sort_chr21_1pc']
-samples2: ['WES005PVFE_chr21', 'WES006JCFE_chr21', 'WES011RCFE_chr21', 
+fasta2: "../data/genome/GRCh37_chr21.fa"
+fasta: "../data/genome/hg19_chr21.fa"
+samples2: ['MH17B001P004-germline-ready_chr21', 'MH17B001P004-ready_chr21', 'MH17T001P004-ready_chr21',
+          'MH17B001P013-germline-ready_chr21', 'MH17B001P013-ready_chr21', 'MH17T001P013-ready_chr21',
+          'WES013PFFR-sort_chr21']
+samples: ['WES005PVFE_chr21', 'WES006JCFE_chr21', 'WES011RCFE_chr21',
            'WES005PVFR_chr21', 'WES006JCFR_chr21', 'WES011RCFR_chr21']
