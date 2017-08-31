@@ -4,11 +4,16 @@
         "time": "02:00:00",
         "n": 1,
         "partition": "vccc",
-        "mem": 15000
+        "mem": 15000,
     },
     "samtools_mpileup":
     {
         "time": "03:00:00",
-        "mem": 20000
-    }
+        "mem": 20000,
+    },
+    "samtools_filter":
+    {
+        "time": "02:00:00",
+        "mem": 20000,
+    },
 }
