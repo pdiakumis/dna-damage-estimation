@@ -34,7 +34,6 @@ And whole `BAM`s of following samples:
 list.files("~/Desktop/git/dna-damage-estimation/data/new", pattern = "[ER]_(tot|pos|con)_damage.tsv") %>% 
   sub("_(tot|pos|con)_damage.tsv", "", .) %>% 
   unique()
-
 ```
 
 ## Estimate total, positional, and context damage
@@ -69,7 +68,7 @@ read_con_damage <- function(fname) {
 
 
 #### Total Damage
-```{r tot_damage, fig.width=10}
+```{r tot_damage}
 fnames <- list.files("~/Desktop/git/dna-damage-estimation/data/new",
                      pattern = "tot_damage.tsv$", full.names = TRUE)
 basename(fnames)
@@ -85,25 +84,40 @@ mut_list <- lapply(fnames, function(f) {
 
 mut_all <- dplyr::bind_rows(mut_list)
 mut_all <- mut_all %>% 
-  mutate(id2 = sub("^\\/", "", id),
-         id2 = sub("-(sort|ready)", "", id2),
-         id2 = sub("-germline", "-germ", id2)) %>% 
-  mutate(id3 = sub("_chr21", "", id2),
-         id4 = grepl("chr21", id2))
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("-(sort|ready)", "", id_clean),
+         id_clean = sub("-germline", "-germ", id_clean)) %>% 
+  mutate(id_joint = sub("_chr21", "", id_clean),
+         id_chr21 = grepl("chr21", id_clean))
 
-table(mut_all$id2, useNA = "ifany")
-table(mut_all$id3, useNA = "ifany") # group same samples together for facet
-table(mut_all$id4, useNA = "ifany")
-
-g <- ggplot(mut_all, aes(x = reorder(type, damage), y = damage, color = id2))
-g + geom_point(alpha = 1/2, size=1.5) +
+mut_all %>% 
+  ggplot(aes(x = reorder(type, damage), y = damage)) +
+  geom_point(alpha = 1/2, size = 1.5, aes(colour = id_clean)) +
   geom_hline(yintercept = 1.5, color = "#990000", linetype = "dashed") +
   annotate("text", x = 4, y = 1.6, color = "#990000",
-           label = "1/3 of variants is due to damage") +
+           label = "1/3 variants due to damage") +
+  geom_hline(yintercept = 0, color = "grey") +
+  theme(panel.background = element_rect(fill = 'white', colour = 'white')) +
+  ggtitle("GIV scores for variant types") 
+```
+
+__Compare chr21 subset to whole bam__
+```{r tot_damage_chr21, fig.height=10, fig.width=12}
+mut_all %>% 
+  filter(
+    grepl(
+      paste0("WES", c("005PV", "006JC", "011RC"), rep(c("FR", "FE"), 3),
+             collapse = "|"),
+      id_clean)) %>% 
+  ggplot(aes(x = reorder(type, damage), y = damage)) +
+  geom_point(alpha = 1/2, size = 1.5, aes(colour = id_chr21)) +
+  geom_hline(yintercept = 1.5, color = "#990000", linetype = "dashed") +
+  annotate("text", x = 4, y = 1.6, color = "#990000",
+           label = "1/3 variants due to damage") +
   geom_hline(yintercept = 0, color = "grey") +
   theme(panel.background = element_rect(fill = 'white', colour = 'white')) +
   ggtitle("GIV scores for variant types") +
-  facet_wrap(~id3, ncol = 3)
+  facet_wrap(~id_joint, ncol = 2)
 ```
  
 #### Position Damage
@@ -114,29 +128,29 @@ basename(fnames)
 mut_list <- lapply(fnames, read_pos_damage)
 
 mut_all <- dplyr::bind_rows(mut_list)
-mut_all <- mut_all %>% 
-  mutate(id2 = sub("^\\/", "", id),
-         id2 = sub("-(sort|ready)", "", id2),
-         id2 = sub("-germline", "-germ", id2)) %>% 
-  mutate(id3 = sub("_chr21", "", id2),
-         chr21 = grepl("chr21", id2))
+mut_all <- mut_all %>%
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("-(sort|ready)", "", id_clean),
+         id_clean = sub("-germline", "-germ", id_clean)) %>%
+  mutate(id_joint = sub("_chr21", "", id_clean),
+         id_chr21 = grepl("chr21", id_clean))
 ```
 
 __Example for type T-G__
-```{r pos_damage, fig.height=20}
-mut_all %>% 
-  filter(type == "T_G", !chr21) %>% 
+```{r pos_damage, fig.height=22}
+mut_all %>%
+  filter(type == "T_G") %>%
   ggplot() +
-  geom_point(aes(x = loc, y = rel, colour = chr21), alpha = 1/2) +
+  geom_point(aes(x = loc, y = rel, colour = id_chr21), alpha = 1/2) +
   theme_bw() +
-  facet_grid(id2 ~ read, scales = "free_y")
+  facet_grid(id_clean ~ read, scales = "free_y")
 ```
 
 __All types shown in separate folder__
 ```{r eval=FALSE}
 for (t in type_clean) {
-  g <- mut_all %>% 
-    filter(type == t) %>% 
+  g <- mut_all %>%
+    filter(type == t) %>%
     ggplot() +
     geom_point(aes(x = loc, y = rel), alpha = 1/2) +
     theme_bw() +
@@ -155,29 +169,31 @@ basename(fnames)
 mut_list <- lapply(fnames, read_con_damage)
 
 mut_all <- dplyr::bind_rows(mut_list)
-mut_all <- mut_all %>% 
-  mutate(id2 = sub("^\\/(.*).*_chr21.*", "\\1", id),
-         id2 = sub("-(sort|ready)", "", id2),
-         id2 = sub("-germline", "-germ", id2))
+mut_all <- mut_all %>%
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("-(sort|ready)", "", id_clean),
+         id_clean = sub("-germline", "-germ", id_clean)) %>%
+  mutate(id_joint = sub("_chr21", "", id_clean),
+         id_chr21 = grepl("chr21", id_clean))
 ```
 
 __Example for type T-G and context TBT__
-```{r con_damage, fig.height=20}
-mut_all %>% 
-  filter(type == "T_G", context == "T_BASE_T") %>% 
+```{r con_damage, fig.height=22}
+mut_all %>%
+  filter(type == "T_G", context == "T_BASE_T") %>%
   ggplot() +
-  geom_point(aes(x = loc, y = rel), alpha = 1/2) +
+  geom_point(aes(x = loc, y = rel, colour = id_chr21), alpha = 1/2) +
   theme_bw() +
-  facet_grid(id2 ~ read, scales = "free_y")
+  facet_grid(id_clean ~ read, scales = "free_y")
 ```
 
 __All types shown in separate folder__
 ```{r eval=FALSE}
 for (t in type_clean) {
   for (con in context_clean) {
-    
-    g <- mut_all %>% 
-      filter(type == t) %>% 
+
+    g <- mut_all %>%
+      filter(type == t) %>%
       ggplot() +
       geom_point(aes(x = loc, y = rel), alpha = 1/2) +
       theme_bw() +
