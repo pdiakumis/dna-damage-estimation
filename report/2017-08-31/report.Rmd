@@ -152,9 +152,9 @@ for (t in type_clean) {
   g <- mut_all %>%
     filter(type == t) %>%
     ggplot() +
-    geom_point(aes(x = loc, y = rel), alpha = 1/2) +
+    geom_point(aes(x = loc, y = rel, colour = id_chr21), alpha = 1/2) +
     theme_bw() +
-    facet_grid(id2 ~ read, scales = "free_y") +
+    facet_grid(id_clean ~ read, scales = "free_y") +
     ggtitle(paste0("Fraction of ", substr(t, 1, 1), " to ", substr(t, 3, 3), " variants on R1 and R2"))
   ggsave(plot = g, filename = paste0("figs/pos_dam_type_", t, ".png"), height = 20, width = 15)
 }
@@ -191,13 +191,12 @@ __All types shown in separate folder__
 ```{r eval=FALSE}
 for (t in type_clean) {
   for (con in context_clean) {
-
     g <- mut_all %>%
-      filter(type == t) %>%
+      filter(type == t, context == con) %>%
       ggplot() +
-      geom_point(aes(x = loc, y = rel), alpha = 1/2) +
+      geom_point(aes(x = loc, y = rel, colour = id_chr21), alpha = 1/2) +
       theme_bw() +
-      facet_grid(id2 ~ read, scales = "free_y") +
+      facet_grid(id_clean ~ read, scales = "free_y") +
       ggtitle(paste0("Fraction of ", substr(t, 1, 1), " to ", substr(t, 3, 3), " variants on R1 and R2",
                      " in context ", con))
     ggsave(plot = g, filename = paste0("figs/con_dam_type_", t, "_cont_", con, ".png"), height = 20, width = 15)
