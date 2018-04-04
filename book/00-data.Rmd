@@ -1,0 +1,13 @@
+# Data Description
+
+We have the following data:
+
+```{r echo=FALSE}
+tibble::tribble( ~sample, ~path, ~description,
+                 #------/------/---------
+                 "foo", "bar", "baz"
+                 ) %>%
+  knitr::kable()
+  
+```
+
