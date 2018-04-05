@@ -1,13 +1,20 @@
 # Data Description
 
-We have the following data:
+We have run the damage estimator on the following samples from the Tothill A5 batch:
 
-```{r echo=FALSE}
-tibble::tribble( ~sample, ~path, ~description,
-                 #------/------/---------
-                 "foo", "bar", "baz"
-                 ) %>%
+```{r}
+data_path <- file.path("../data/out/A5")
+data_path %>% 
+  list.files(pattern = "tot_damage.tsv") %>%
+  str_replace("_chr21_tot_damage.tsv", "") %>% 
+  as_tibble() %>% 
+  rename(sample = value) %>% 
   knitr::kable()
-  
+```
+
+A chr21 subset was generated from these files with the following command:
+
+```bash
+samtools view -h ${sample}.bam -b > ${sample}_chr21.bam
 ```
 

@@ -17,7 +17,12 @@ Bla bla.
 
 ## Required R Packages {-}
 
+```{r knitr_opts, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+```
+
 ```{r load_pkgs, message=FALSE, warning=FALSE}
 require(tidyverse)
 ```
+
 

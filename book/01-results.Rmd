@@ -1,0 +1,109 @@
+# Results
+
+## Damage Estimation
+
+* Functions
+
+```{r}
+read_tot_damage <- function(fname) {
+  readr::read_tsv(fname, 
+                  col_names = c("abs", "type", "id", "count", "family", "damage"),
+                  col_types = "iccdcd") %>% 
+    arrange(type)
+}
+
+read_pos_damage <- function(fname) {
+  readr::read_tsv(fname,
+                 col_names = c("id", "type", "read", "rel", "abs", "loc"),
+                 col_types = "cccdii") %>% 
+    arrange(type, read, loc)
+}
+
+read_con_damage <- function(fname) {
+  readr::read_tsv(fname,
+                  col_names = c("id", "type", "read", "rel", "loc", "context", "abs"),
+                  col_types = "cccdici") %>% 
+    arrange(type, read, loc, context)
+}
+ 
+```
+
+
+### Plots
+
+
+#### Total Damage
+```{r tot_damage, fig.height=8}
+fnames <- list.files(data_path,
+                     pattern = "tot_damage.tsv$", full.names = TRUE)
+basename(fnames)
+
+type_clean <- c("G_T", "C_A", "C_T", "G_A", "T_A", "A_T",
+                "A_G", "T_C", "C_G", "G_C", "T_G", "A_C")
+mut_list <- lapply(fnames, function(f) {
+  mut <- read_tot_damage(f) %>% 
+    filter(type %in% type_clean) %>%
+    mutate(type = factor(type, level = type_clean))
+  mut
+})
+
+mut_all <- dplyr::bind_rows(mut_list) %>% 
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("_E12.*", "", id_clean))
+
+mut_all %>% 
+  ggplot(aes(x = reorder(type, damage), y = damage)) +
+  geom_point(alpha = 1/2, size = 1.5, aes(colour = id_clean)) +
+  geom_hline(yintercept = 1.5, color = "#990000", linetype = "dashed") +
+  annotate("text", x = 4, y = 1.6, color = "#990000",
+           label = "1/3 variants due to damage") +
+  geom_hline(yintercept = 0, color = "grey") +
+  theme(panel.background = element_rect(fill = 'white', colour = 'white')) +
+  ggtitle("GIV scores for variant types") 
+```
+
+#### Position Damage
+```{r}
+fnames <- list.files(data_path,
+                     pattern = "pos_damage.tsv$", full.names = TRUE)
+basename(fnames)
+mut_list <- lapply(fnames, read_pos_damage)
+
+mut_all <- dplyr::bind_rows(mut_list) %>% 
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("_E12.*", "", id_clean))
+```
+
+__Example for type A-C__
+```{r pos_damage, fig.height=10}
+mut_all %>%
+  filter(type == "A_C") %>%
+  ggplot() +
+  geom_point(aes(x = loc, y = rel), colour = "purple", alpha = 1/2) +
+  theme_bw() +
+  facet_grid(id_clean ~ read, scales = "free_y")
+```
+
+#### Context Damage
+```{r}
+context_clean <- paste0(c("A", "T", "C", "G"), "_BASE_", rep(c("A", "T", "C", "G"), each = 4))
+fnames <- list.files(data_path,
+                     pattern = "con_damage.tsv$", full.names = TRUE)
+basename(fnames)
+mut_list <- lapply(fnames, read_con_damage)
+
+mut_all <- dplyr::bind_rows(mut_list) %>% 
+  mutate(id_clean = sub("^\\/", "", id),
+         id_clean = sub("_E12.*", "", id_clean))
+```
+
+__Example for type T-G and context TBT__
+```{r con_damage, fig.height=10}
+mut_all %>%
+  filter(type == "T_G", context == "T_BASE_T") %>%
+  ggplot() +
+  geom_point(aes(x = loc, y = rel), colour = "steelblue", alpha = 1/2) +
+  theme_bw() +
+  facet_grid(id_clean ~ read, scales = "free_y")
+```
+
