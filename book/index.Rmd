@@ -12,10 +12,17 @@ description: "Estimation of DNA Damage in WGS Samples"
 
 # Introduction {-}
 
-Bla bla.
+Here we'll describe a few code tweaks to the DNA Damage Estimator (DDE) toolkit
+developed by Laurence Ettwiller (https://github.com/Ettwiller/Damage-estimator and
+http://science.sciencemag.org/content/355/6326/752.long). We are interested in
+running this tool on all the UMCCR samples processed with bcbio, so it is important
+that we keep the runtime low.
 
+* Section \@ref(dde-summary) has a detailed summary of the DDE functionality
+* Section \@ref(dde-issues) has a few simple ways we can save computational
+  time when running DDE
 
-## Required R Packages {-}
+## Required Software {-}
 
 ```{r knitr_opts, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE)

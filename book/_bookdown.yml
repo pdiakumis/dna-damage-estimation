@@ -1,4 +1,5 @@
 output_dir: "_book_dna_dam_est"
+rmd_files: ["index.Rmd", "dde-summary.Rmd", "dde-issues.Rmd", "data.Rmd"]
 delete_merged_file: true
 language:
   ui:
