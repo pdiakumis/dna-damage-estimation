@@ -1,13 +1,23 @@
 # DDE Summary {#dde-summary}
 
+DDE has 5 main steps:
+
+1. Split BAM into R1 and R2 BAMs
+2. Generate R1 and R2 pileups
+3. Clean bases in pileups
+4. Get relative counts for pileups
+5. Estimate final damage metrics based on relative counts from step 4.
+
 ## `split_mapped_reads.pl`
 
-* Splits a `BAM` file into two files containing the first mate (R1 - flag 64) and the
+* Splits a `BAM` file into two BAM files containing the first mate (R1 - flag 64) and the
 second mate (R2 - flag 128) of the paired-end reads, using `samtools view -f <flag>`.
+
 * Creates `pileup` files using `samtools mpileup -O -s -q <min_mapq> -Q <min_baseq>`, where:
     - `-O`: output base positions on reads
     - `-s`: output mapping quality
-
+    - `min_mapq` = 10 by default
+    - `min_baseq` = 0 by default
 
 ### Pileup format
 
@@ -32,14 +42,14 @@ a read are all encoded at the __read bases__ column. In this column:
 - `[ACGTN]`: mismatch on the forward strand
 - `[acgtn]`: mismatch on the reverse strand.
 - `\\+[0-9]+[ACGTNacgtn]+` pattern: insertion between this and next ref position
-  Integer = length of insertion, followed by inserted sequence.
+    - Integer = length of insertion, followed by inserted sequence.
 - `-[0-9]+[ACGTNacgtn]+` pattern : deletion from the reference.
-  Deleted bases will be presented as `*` in the following lines.
+    - Deleted bases will be presented as `*` in the following lines.
 - `^`: start of a read. The ASCII of the character following `^` minus 33 gives
   the mapping quality.
 - `$`: end of a read.
 
-### Examples
+#### Pileup Examples
 
 * Row1: vanilla
 * Row2: with `--no-BAQ`
@@ -96,17 +106,22 @@ chr, pos, ref, cov, rbases, baseq, mapq, basepos:
 
 ## `estimate_damage.pl`
 
+* Parameters:
+    - pileups R1, R2
+    - minimum base quality score (default 30)
+    - minimum coverage (default 1)
+    - maximum coverage (default 100)
+
 Has two functions:
 
 * Function1: `clean_bases`: called as `clean_bases(<rbases>, <cov>)`. The `<cov>` parameter
-  isn't used anywhere in the function. The `<rbases>` is referred to as `pattern`.
+  isn't used anywhere in the function (sigh). The `<rbases>` is referred to as `pattern`.
     1. Take the `pattern` and remove any `^` followed by a character, and any `$`.
     2. If there is an indel in the `pattern`, then remove as many characters as
        its length, leaving the `+` or `-` sign.
     3. Return the `pattern`.
 
 Here's a sample of what the function does:
-
 
 ```
 dirty: ,.,,+1a,
@@ -157,8 +172,8 @@ clean: +..
     * Split the `bases` into an array `tmp`, and
       `length_mutation` is this array's length
     * Split the `read positions` into an array `poss`
-    * __If__ the coverage (number of reads) is equal to the `length_mutation` do the
-      following:
+    * __If__ the coverage (number of reads) is equal to the `length_mutation` and
+      within the min/max limits, do the following:
         * Split the `bases` into an array `base`
         * Split the `baseq` into an array `qualities`
         * For every index across the `base`:
@@ -166,6 +181,10 @@ clean: +..
             * If this passes the cutoff:
                 * Collect the counts of ref-alt counts in a `result` hash with
                   two elements: `type` and `nt`:
+
+* So essentially: go through the mpileup bases, and count the good quality forward
+  strand mutations or reference calls. 'type' will be mutation type e.g. from T to G, or A to A (ref), or C to - (deletion).
+  'nt' will be reference nucleotide total, for those mutations.
 
 ```
 %result:
@@ -187,6 +206,7 @@ clean: +..
         }
     };
 ```
+
 * Close the file
 * `mutations` are the different types
 * Get all the different counts of types and store in the `final` hash:
@@ -301,20 +321,22 @@ $VAR1 = \{
           };
 ```
 
-So each of the above hashes has two values for a given key-type: `total` and
-`total_type`. For each key-type in the R1 hash:
-
-* Get its reverse complement (`type_RC`)
-* Join `type` and `type_RC` (`couple`)
-* Get `total_type` of that type in R1 and R2 hashes (e.g. for `G_G` it will be 1784 for R1 and 416 for R2 (the reverse complement is taken for R2))
-* Get `total` similarly (e.g. for `G_G` it will be 1785/418 for R1/R2 RevComp)
-* If both R1/R2 have `total_type`, then:
-    * Sum them up e.g. for `G_G`:
-        * `total_type` = 1784 + 416 = 2200 
-        * `total` = 1785 + 418 = 2203)
-    * Get the proportion:
-        * `value` = `total_type` / `total`: 2200 / 2203 = 0.998
-    * Put all that info into the `final` hash:
+* So up to here we've counted how many different mutations we have in
+  both the R1 and R2 pileups.
+* So each of the above hashes has two values for a given key-type: `total` and
+  `total_type`. For each key-type in the R1 hash:
+    * Get its reverse complement (`type_RC`)
+    * Join `type` and `type_RC` (`couple`)
+    * Get `total_type` of that type in R1 and R2 hashes
+      (e.g. for `G_G` it will be 1784 for R1 and 416 for R2 (the reverse complement is taken for R2))
+    * Get `total` similarly (e.g. for `G_G` it will be 1785/418 for R1/R2 RevComp)
+    * If both R1/R2 have `total_type`, then:
+        * Sum them up e.g. for `G_G`:
+            * `total_type` = 1784 + 416 = 2200 
+            * `total` = 1785 + 418 = 2203
+        * Get the proportion:
+            * `value` = `total_type` / `total`: 2200 / 2203 = 0.998
+        * Put all that info into the `final` hash:
 
 ```
 %final = {
