@@ -1,4 +1,4 @@
-# DDE Summary {#dde-summary}
+# DDE Method Summary {#dde-summary}
 
 DDE has 5 main steps:
 

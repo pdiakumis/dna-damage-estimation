@@ -1,12 +1,9 @@
 --- 
 title: "DNA Damage Estimation"
 author: "Peter Diakumis"
-date: "`r Sys.Date()`"
+date: "`r format(Sys.time(), '%a %Y-%b-%d')`"
 site: bookdown::bookdown_site
 documentclass: book
-bibliography: [book.bib]
-biblio-style: apalike
-link-citations: yes
 description: "Estimation of DNA Damage in WGS Samples"
 ---
 
@@ -17,19 +14,20 @@ developed by Laurence Ettwiller (https://github.com/Ettwiller/Damage-estimator a
 http://science.sciencemag.org/content/355/6326/752.long) to
 estimate sample damage for a set of WGS tumor samples.
 We are interested in running this tool on all the UMCCR samples processed with
-bcbio, so it is important that we keep the runtime low.
-
-* Section \@ref(dde-summary) has a detailed summary of the DDE functionality
-* Section \@ref(dde-issues) has a few simple ways we can save computational
-  time when running DDE
+bcbio. We can run DDE using the Snakemake workflow in 
+[woof](https://github.com/umccr/woof/tree/master/woof/rules/damest).
 
 #### Load R Packages {-}
 
 ```{r knitr_opts, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, echo = TRUE)
 ```
 
 ```{r load_pkgs, message=FALSE, warning=FALSE}
+require(DT)
+require(googlesheets)
+require(janitor)
+require(plotly)
 require(tidyverse)
 ```
 
