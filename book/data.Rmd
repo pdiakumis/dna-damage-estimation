@@ -1,20 +1,64 @@
-# Data Description
+# Data Description {#data-description}
 
-We have run the damage estimator on the following samples from the Tothill A5 batch:
+Access the UMCCR Samples spreadsheet:
 
-```{r}
-data_path <- file.path("../data/out/A5")
-data_path %>% 
-  list.files(pattern = "tot_damage.tsv") %>%
-  str_replace("_chr21_tot_damage.tsv", "") %>% 
-  as_tibble() %>% 
-  rename(sample = value) %>% 
-  knitr::kable()
+```{r read-gs, eval=FALSE}
+# Courtesy of ohofmann
+# Register UMCCR spreadsheet. Use cached authentication.
+# Use spreadsheet ID to access gs
+googlesheets::gs_auth()
+samples_gs <- 
+  googlesheets::gs_key('1DwvyfVrgr5TIcYtGVXZeIWWRbld-nuX-4o4z2kZHNWs') %>% 
+  googlesheets::gs_read(ws = 'Sheet1', verbose = FALSE)
+saveRDS(samples_gs, "../data/umccr_googlesheet.rds")
 ```
 
-A chr21 subset was generated from these files with the following command:
+```{r process-gs}
+# * clean up
+# * organize by year and month
+# * extract year/month from timestamp
+# * distinguish between failed / pending / processed samples
+# * ignore several runs
+# * keep processed tumor WGS samples
+samples <- 
+  readr::read_rds("../data/umccr_googlesheet.rds") %>%
+  janitor::clean_names() %>%
+  janitor::remove_empty(c('rows', 'cols')) %>%
+  dplyr::mutate(subject_id = gsub(' ', '.', subject_id)) %>%
+  dplyr::mutate(results = ifelse(is.na(results), '-', results), 
+                month = format(timestamp, '%m'),
+                year = format(timestamp, '%Y'),
+                status = dplyr::case_when(results == 'Failed' ~ 'failed',
+                                          grepl('cephfs', results) ~ 'processed',
+                                          TRUE ~ 'pending')) %>% 
+  dplyr::filter(status == 'processed', type == 'WGS', phenotype == 'tumor', notes %in% NA)
+  # dplyr::filter(!project %in% c('Positive-control', 'Negative-control', 'Accreditation',
+  #                               '10X-Collaboration', 'Cori-Research', 'Kolling-Research')) %>% 
+```
 
-```bash
-samtools view -h ${sample}.bam -b > ${sample}_chr21.bam
+```{r get-bams}
+df <- samples %>%
+  dplyr::select(project, sample_name, type, phenotype, results, year, month, run) %>% 
+  dplyr::mutate(bam = file.path(results, "final", sample_name, paste0(sample_name, "-ready.bam"))) %>% 
+  dplyr::arrange(project)
+
+df %>%  
+  DT::datatable(rownames = FALSE, filter = "top", extensions = c('Scroller', 'Buttons'),
+                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300,
+                               dom = 'Bfrtip', buttons = c('csv', 'excel')))
+
+# problematic samples
+#"17MHP031Bld-CCR170089_S1", "17MHP031Bld")) %>% 
+#"CCR170011_MH17B001P006_S6", "p006_normal")) %>% 
+#"CCR170094_MH17B001P032_S3", "p032_normal")) %>% 
+#"PRJ170195_GBB10_B", "GBB10_B")) %>% 
+#"kConFab-Mother-Blood", "kconfab_blood")) %>% 
+#"PRJ170198_SFRC01059_B", "diploid_blood")) %>% 
+#"PRJ170197_CUP_SC932_blood_S2", "cup_normal")) %>% 
+#"PRJ180514_CMN_N", "CMN_Normal")) %>% 
+#"2984Nor-PRJ170090", "IPMN2984_normal")) %>% 
+#"PRJ170062-2219-8073022ddnm_S2", "IPMN2219_normal")) %>% 
+#"3541Nor-PRJ170104", "IPMN3541_normal")) %>% 
+#"PRJ170052_IPMN1957_N_S4", "IPMN1957")) %>% 
 ```
 
