@@ -1,0 +1,3 @@
+book/*.css linguist-vendored
+book/*.yml linguist-vendored
+snake/*.json linguist-vendored
