@@ -1,0 +1,15 @@
+name: bookdown
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base
+  - r-bookdown
+  - r-dt
+  - r-janitor
+  - r-knitr
+  - r-markdown
+  - r-plotly
+  - r-rmarkdown
+  - r-tidyverse
