@@ -1,6 +1,6 @@
 # Data Description {#data-description}
 
-Access the UMCCR Samples spreadsheet:
+* Access the UMCCR Samples spreadsheet:
 
 ```{r read-gs, eval=FALSE}
 # Courtesy of ohofmann
@@ -12,6 +12,8 @@ samples_gs <-
   googlesheets::gs_read(ws = 'Sheet1', verbose = FALSE)
 saveRDS(samples_gs, paste0("../data/umccr_googlesheet_", strftime(Sys.time(), "%Y-%m-%d"), ".rds"))
 ```
+
+* Clean up samples
 
 ```{r process-gs, eval=FALSE}
 # * clean up
@@ -38,6 +40,8 @@ samples <-
                                 'Accreditation-PCR-free-test')) %>% 
   dplyr::filter(!grepl("topup", sample_id))
 ```
+
+* Find BAMs
 
 ```{r get-bams, eval=FALSE}
 df1 <- samples %>%
@@ -148,14 +152,17 @@ table(final$phenotype) # 181 each
 saveRDS(final, "../data/samples_final.rds")
 ```
 
+* Sample table for damage estimator
+
 ```{r show-table}
 df <- readRDS("../data/samples_final.rds") %>% dplyr::ungroup()
 
-DT::datatable(df, rownames = FALSE, filter = "top", extensions = c('Scroller', 'Buttons'),
+DT::datatable(df %>% select(-bam), rownames = FALSE, filter = "top", extensions = c('Scroller', 'Buttons'),
               options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300,
                              dom = 'Bfrtip', buttons = c('csv', 'excel')))
-
 ```
+
+* Export samples to yaml format
 
 ```{r samples2yaml, eval=FALSE}
 # batch | bam_path | alias | phenotype
