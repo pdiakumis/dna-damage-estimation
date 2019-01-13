@@ -148,7 +148,6 @@ table(final$phenotype) # 181 each
 saveRDS(final, "../data/samples_final.rds")
 ```
 
-
 ```{r show-table}
 df <- readRDS("../data/samples_final.rds") %>% dplyr::ungroup()
 
@@ -157,3 +156,70 @@ DT::datatable(df, rownames = FALSE, filter = "top", extensions = c('Scroller', '
                              dom = 'Bfrtip', buttons = c('csv', 'excel')))
 
 ```
+
+```{r samples2yaml, eval=FALSE}
+# batch | bam_path | alias | phenotype
+df <- df %>% 
+  dplyr::select(batch, bam, alias, phenotype)
+
+x <- df %>%
+  group_by(batch) %>%
+  summarise(n_rows = n(),
+            distinct_pheno = n_distinct(phenotype),
+            distinct_bam = n_distinct(bam),
+            distinct_alias = n_distinct(alias))
+
+
+prob_ind <- which(x[-1] != 2, arr.ind = TRUE) %>% as.data.frame()
+
+prob_entry <- function(x, prob_ind) {
+  batch_nm <- x$batch
+  problem <- names(x)[-1]
+  prob_ind$batch <- batch_nm[prob_ind$row]
+  prob_ind$problem <- problem[prob_ind$col]
+
+  out <- prob_ind %>%
+    select(batch, problem) %>%
+    arrange(batch) %>%
+    mutate(message = paste0(batch, ": ", problem)) %>%
+    pull(message)
+  out
+}
+
+pe <- prob_entry(x, prob_ind)
+
+if (length(pe) > 0) {
+  stop("There are issues with the samples file.\n",
+       "There should be 2 rows per batch, with tumor + normal phenotypes,\n",
+       "and 2 distinct BAMs and aliases per batch",
+       "Check the following for indications:\n", paste(pe, collapse = "\n"))
+}
+
+samp_m <- df %>%
+  gather(key, value, -one_of('batch', 'phenotype')) %>%
+  arrange(batch) %>%
+  unite(var, phenotype, key) %>%
+  spread(var, value)
+
+
+
+
+sample_list <- vector(mode = "list", length = nrow(samp_m))
+names(sample_list) <- samp_m$batch
+
+for (i in 1:nrow(samp_m)) {
+
+  alias_tumor <- samp_m$tumor_alias[i]
+  alias_normal <- samp_m$normal_alias[i]
+  bam_tumor <- samp_m$tumor_bam[i]
+  bam_normal <- samp_m$normal_bam[i]
+  mini_list <- list(list(bam = bam_tumor, name = alias_tumor, phenotype = "tumor"),
+                    list(bam = bam_normal, name = alias_normal, phenotype = "normal"))
+  names(mini_list) <- c(alias_tumor, alias_normal)
+  sample_list[[i]] <-  mini_list
+}
+
+cat(yaml::as.yaml(sample_list)) # awesome
+write(yaml::as.yaml(sample_list), file = "../../../woof/config/samples_damest.yaml")
+```
+
