@@ -10,55 +10,150 @@ googlesheets::gs_auth()
 samples_gs <- 
   googlesheets::gs_key('1DwvyfVrgr5TIcYtGVXZeIWWRbld-nuX-4o4z2kZHNWs') %>% 
   googlesheets::gs_read(ws = 'Sheet1', verbose = FALSE)
-saveRDS(samples_gs, "../data/umccr_googlesheet.rds")
+saveRDS(samples_gs, paste0("../data/umccr_googlesheet_", strftime(Sys.time(), "%Y-%m-%d"), ".rds"))
 ```
 
-```{r process-gs}
+```{r process-gs, eval=FALSE}
 # * clean up
 # * organize by year and month
 # * extract year/month from timestamp
 # * distinguish between failed / pending / processed samples
-# * ignore several runs
 # * keep processed tumor WGS samples
+# * filter out weird projects
+# 489 rows
 samples <- 
-  readr::read_rds("../data/umccr_googlesheet.rds") %>%
+  readr::read_rds("../data/umccr_googlesheet_2019-01-07.rds") %>%
   janitor::clean_names() %>%
   janitor::remove_empty(c('rows', 'cols')) %>%
-  dplyr::mutate(subject_id = gsub(' ', '.', subject_id)) %>%
-  dplyr::mutate(results = ifelse(is.na(results), '-', results), 
+  dplyr::mutate(subject_id = gsub(' ', '.', subject_id), 
+                results = ifelse(is.na(results), '-', results), 
                 month = format(timestamp, '%m'),
                 year = format(timestamp, '%Y'),
                 status = dplyr::case_when(results == 'Failed' ~ 'failed',
                                           grepl('cephfs', results) ~ 'processed',
                                           TRUE ~ 'pending')) %>% 
-  dplyr::filter(status == 'processed', type == 'WGS', phenotype == 'tumor', notes %in% NA)
-  # dplyr::filter(!project %in% c('Positive-control', 'Negative-control', 'Accreditation',
-  #                               '10X-Collaboration', 'Cori-Research', 'Kolling-Research')) %>% 
+  dplyr::filter(type == 'WGS', status == 'processed', notes %in% NA) %>%
+  dplyr::filter(!project %in% c('Positive-control', 'Negative-control', 'Accreditation',
+                                '10X-Collaboration', 'Cori-Research', 'Kolling-Research',
+                                'Accreditation-PCR-free-test')) %>% 
+  dplyr::filter(!grepl("topup", sample_id))
 ```
 
-```{r get-bams}
-df <- samples %>%
-  dplyr::select(project, sample_name, type, phenotype, results, year, month, run) %>% 
-  dplyr::mutate(bam = file.path(results, "final", sample_name, paste0(sample_name, "-ready.bam"))) %>% 
-  dplyr::arrange(project)
+```{r get-bams, eval=FALSE}
+df1 <- samples %>%
+  dplyr::mutate(
+    batch = subject_id,
+    bam_expected = file.path(results, "final", sample_name, paste0(sample_name, "-ready.bam")),
+    bam_exists = file.exists(bam_expected)) %>% 
+  dplyr::select(run, project, batch, sample_name, sample_id, phenotype, year, month, results, bam_exists, bam_expected, notes)
 
-df %>%  
-  DT::datatable(rownames = FALSE, filter = "top", extensions = c('Scroller', 'Buttons'),
-                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300,
-                               dom = 'Bfrtip', buttons = c('csv', 'excel')))
+table(df1$bam_exists)
 
-# problematic samples
-#"17MHP031Bld-CCR170089_S1", "17MHP031Bld")) %>% 
-#"CCR170011_MH17B001P006_S6", "p006_normal")) %>% 
-#"CCR170094_MH17B001P032_S3", "p032_normal")) %>% 
-#"PRJ170195_GBB10_B", "GBB10_B")) %>% 
-#"kConFab-Mother-Blood", "kconfab_blood")) %>% 
-#"PRJ170198_SFRC01059_B", "diploid_blood")) %>% 
-#"PRJ170197_CUP_SC932_blood_S2", "cup_normal")) %>% 
-#"PRJ180514_CMN_N", "CMN_Normal")) %>% 
-#"2984Nor-PRJ170090", "IPMN2984_normal")) %>% 
-#"PRJ170062-2219-8073022ddnm_S2", "IPMN2219_normal")) %>% 
-#"3541Nor-PRJ170104", "IPMN3541_normal")) %>% 
-#"PRJ170052_IPMN1957_N_S4", "IPMN1957")) %>% 
+# find non-existent bams
+df2 <-  df1 %>% 
+  dplyr::filter(!bam_exists)
+
+
+df_new <- tibble::tribble(
+  ~num, ~sample_name, ~bcbio_name,
+  1, "CCR170031-P010tmr", "p010_tumor",
+  2, "PRJ170061-2219-8072958pncrs_S1", "IPMN2219_tumor",
+  3, "PRJ170062-2219-8073022ddnm_S2", "IPMN2219_normal",
+  4, "3541Tum-PRJ170103", "IPMN3541_tumor",
+  5, "3541Nor-PRJ170104", "IPMN3541_normal",
+  6, "17MHP002FNA-CCR170028", "17MHP002FNA",
+  7, "17MHP002Org-CCR170058", "17MHP002Org",
+  8, "17MHP031Tmr-CCR170090_S2", "17MHP031Tmr",
+  9, "17MHP031Bld-CCR170089_S1", "17MHP031Bld",
+  10, "2984Nor-PRJ170090", "IPMN2984_normal",
+  11, "2984IPMN-PRJ170089", "IPMN2984_tumor",
+  12, "PRJ170052_IPMN1957_N_S4", "IPMN1957",
+  13, "PRJ170051_IPMN1957_T_S3", "IPMN1957_tumor",
+  14, "CCR170094_MH17B001P032_S3", "p032_normal",
+  15, "CCR170119_VPT_M032_S4", "p032_organoid",
+  16, "PRJ170197_CUP_SC932_blood_S2", "cup_normal",
+  17, "PRJ170196_CUP_SC932_tissue_S1", "cup_tissue",
+  18, "CCR170011_MH17B001P006_S6", "p006_normal",
+  19, "CCR170123_VPT_M006B_S7", "p006_tumor",
+  20, "PRJ170195_GBB10_B", "GBB10_B",
+  21, "PRJ170194_GBB10_T", "GBB10_T",
+  22, "kConFab-Mother-Ascites", "kconfab_ascites",
+  23, "kConFab-Mother-Blood", "kconfab_blood",
+  24, "kConFab-Mother-PleuralEff", "kconfab_pleural",
+  25, "PRJ170198_SFRC01059_B", "diploid_blood",
+  26, "PRJ170218A_SFRC01059_T", "diploid_tumor",
+  27, "PRJ180144_3371-8073337N", "NOBAM",
+  28, "PRJ180514_CMN_N", "CMN_Normal",
+  29, "PRJ180515_CMN_T", "CMN_Tumor",
+  30, "PRJ180201_1965-8073358T", "PRJ180201_1965_8073358T",
+  31, "PRJ180202_1965-8073370T", "PRJ180202_1965_8073370T",
+  32, "PRJ180207_2121-8073359T", "PRJ180207_2121_8073359T",
+  33, "PRJ180208_2121-8073372N", "PRJ180208_2121_8073372N")
+
+# 488 rows
+df_all <- df1 %>% 
+  dplyr::left_join(df_new, by = "sample_name") %>% 
+  dplyr::mutate(bam_expected = ifelse(bam_exists, bam_expected, file.path(results, "final", bcbio_name, paste0(bcbio_name, "-ready.bam"))),
+                bam_exists = file.exists(bam_expected),
+                bcbio_name = ifelse(is.na(bcbio_name), sample_name, bcbio_name)) %>% 
+  dplyr::filter(bam_exists) %>% 
+  dplyr::select(run:sample_name, bcbio_name, phenotype:month, bam = bam_expected)
+
+
+get_new_batch <- function(batch, phenotype) {
+  stopifnot(length(batch) == length(phenotype))
+  n <- length(batch)
+  new_batch <- vector(mode = "character", length = n)
+  x <- table(phenotype)
+  if (n > 2) {
+    tum_ns <- seq_len(x["tumor"])
+    new_batch[phenotype == "tumor"] <- paste0(batch[phenotype == "tumor"], '_', tum_ns)
+    # assume only one normal for now
+    new_batch[phenotype == "normal"] <- paste0(batch[phenotype == "tumor"], '_', tum_ns, collapse = ";")
+  } else {
+    new_batch <- batch
+  }
+  return(new_batch)
+}
+
+# 483 rows
+unique_samples <- df_all %>%
+  dplyr::group_by(bcbio_name) %>%
+  dplyr::filter(row_number(bcbio_name) == 1)
+
+# Create new batch information
+batches <- unique_samples %>%
+  dplyr::group_by(batch) %>%
+  dplyr::mutate(new_batch = get_new_batch(batch, phenotype)) %>% 
+  dplyr::select(run, project, 
+                batch, new_batch, 
+                alias = bcbio_name, 
+                phenotype, year, month, bam)
+
+# Keep only standard tumor-normal pairs
+complete_batches <- batches %>%
+  dplyr::group_by(new_batch) %>%
+  dplyr::summarise(phenotype_count = n_distinct(phenotype)) %>%
+  dplyr::filter(phenotype_count == 2) %>%
+  dplyr::pull(new_batch)
+
+
+# 362 rows
+final <- batches %>% 
+  dplyr::filter(new_batch %in% complete_batches) %>% 
+  dplyr::select(run, project, batch, alias, phenotype, year, month, bam)
+
+table(final$phenotype) # 181 each
+
+saveRDS(final, "../data/samples_final.rds")
 ```
 
+
+```{r show-table}
+df <- readRDS("../data/samples_final.rds") %>% dplyr::ungroup()
+
+DT::datatable(df, rownames = FALSE, filter = "top", extensions = c('Scroller', 'Buttons'),
+              options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300,
+                             dom = 'Bfrtip', buttons = c('csv', 'excel')))
+
+```
