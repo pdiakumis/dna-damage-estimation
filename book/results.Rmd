@@ -1,0 +1,112 @@
+# Results {#results}
+
+
+```{r read-res-fun}
+read_tot_damage <- function(fname) {
+  readr::read_tsv(fname,
+                  col_names = c("abs", "type", "experiment", "count", "family", "damage"),
+                  col_types = "iccdcd") %>%
+    arrange(type)
+}
+
+read_pos_damage <- function(fname) {
+  readr::read_tsv(fname,
+                 col_names = c("experiment", "type", "read", "count", "abs", "loc"),
+                 col_types = "cccdii") %>%
+    arrange(type, read, loc)
+}
+```
+
+
+## Total damage
+
+```{r tot-damage-check-equal, eval=FALSE}
+new_fn <- list.files("../data/results/new", pattern = "tot_damage", 
+                     full.names = TRUE, recursive = TRUE)
+new <- purrr::map(new_fn, read_tot_damage) %>%
+  purrr::set_names(sub("_tot_damage.tsv", "", basename(new_fn))) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::arrange(sample, family, type)
+
+old_fn <- list.files("../data/results/old", pattern = "damage_estimate.txt",
+                     full.names = TRUE, recursive = TRUE)
+
+old <- purrr::map(old_fn, read_tot_damage) %>%
+  purrr::set_names(sub("_damage_estimate.txt", "", basename(old_fn))) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::arrange(sample, family, type)
+
+identical(new, old)
+```
+
+```{r tot-damage, fig.width=30}
+bases <- c("A", "T", "C", "G")
+indel_type <- paste0(bases, rep(c("_+", "_-"), each = 4))
+snv_type <- c("A_C", "A_G", "A_T", "C_A", "C_G", "C_T",
+              "G_A", "G_C", "G_T", "T_A", "T_C", "T_G")
+
+fn <- list.files("../data/results/new", pattern = "tot_damage", 
+                 full.names = TRUE, recursive = TRUE)
+tot <- 
+  purrr::map(fn, read_tot_damage) %>%
+  purrr::set_names(sub("_tot_damage.tsv", "", basename(fn))) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::arrange(sample, family, type) %>% 
+  dplyr::filter(type %in% c(indel_type, snv_type)) %>%
+  dplyr::mutate(mut_type = ifelse(type %in% snv_type, "SNV", "INDEL")) %>% 
+  dplyr::select(alias = sample, type, damage, mut_type)
+
+# join with bcbio google-lims info
+samples <- 
+  readRDS("../data/samples_final.rds") %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(run, project, alias, phenotype, year, month) %>% 
+  dplyr::mutate(date = as.Date(paste0(year, "-", month, "-01")))
+  
+df <- 
+  dplyr::left_join(tot, samples, by = "alias") %>% 
+  dplyr::mutate(date = as.numeric(date),
+                alias = as.factor(alias))
+
+p <- ggplot(df, aes(x = forcats::fct_reorder(alias, date), y = damage, color = type)) +
+  geom_point(alpha = 1/2, size = 1.5) +
+  geom_line(aes(group = type)) +
+  facet_wrap(~mut_type, ncol = 1) +
+  theme(panel.background = element_rect(fill = 'white', colour = 'white'),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+p
+# plotly::ggplotly(p)
+```
+
+
+## Positional Damage
+
+```{r pos-damage-check-equal, eval=TRUE, fig.height=15}
+new_fn <- list.files("../data/results/new", pattern = "pos_damage", 
+                     full.names = TRUE, recursive = TRUE)
+new <- purrr::map(new_fn, read_pos_damage) %>%
+  purrr::set_names(sub("_pos_damage.tsv", "", basename(new_fn))) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::arrange(sample, type, loc, abs)
+
+old_fn <- list.files("../data/results/old", pattern = "damage_estimate_pos.txt",
+                     full.names = TRUE, recursive = TRUE)
+
+old <- purrr::map(old_fn, read_pos_damage) %>%
+  purrr::set_names(sub("_damage_estimate_pos.txt", "", basename(old_fn))) %>%
+  dplyr::bind_rows(.id = "sample") %>%
+  dplyr::arrange(sample, type, loc, abs)
+
+identical(new, old)
+
+pos_p <- new %>%
+  dplyr::filter(type %in% c(indel_type, snv_type))
+
+pos_p %>%
+  filter(sample == "17MHP031Tmr") %>%
+  ggplot(aes(x = loc, y = count)) +
+  geom_point(alpha = 1/6) +
+  theme_bw() +
+  facet_grid(type~read)
+```
+
