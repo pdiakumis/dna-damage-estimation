@@ -39,7 +39,7 @@ old <- purrr::map(old_fn, read_tot_damage) %>%
 identical(new, old)
 ```
 
-```{r tot-damage, fig.width=30}
+```{r tot-damage, fig.width=50}
 bases <- c("A", "T", "C", "G")
 indel_type <- paste0(bases, rep(c("_+", "_-"), each = 4))
 snv_type <- c("A_C", "A_G", "A_T", "C_A", "C_G", "C_T",
